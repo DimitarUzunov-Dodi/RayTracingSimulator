@@ -70,10 +70,34 @@ float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& deb
 glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
     if (features.enableShading) {
-        // If shading is enabled, compute the contribution from all lights.
+        glm::vec3 result = glm::vec3(0, 0, 0);
 
+         //If shading is enabled, compute the contribution from all lights.
+         for (const auto& light : scene.lights) {
+             if (std::holds_alternative<PointLight>(light)) {
+
+                 const PointLight pointLight = std::get<PointLight>(light);    
+                result += computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+
+             } else if (std::holds_alternative<SegmentLight>(light)) {
+
+                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
+                 result += 0.5f * computeShading(segmentLight.endpoint0, segmentLight.color0, features, ray, hitInfo) +
+                 0.5f * computeShading(segmentLight.endpoint1, segmentLight.color1, features, ray, hitInfo);
+
+             } else if (std::holds_alternative<ParallelogramLight>(light)) {
+
+                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
+                 result += 0.25f * computeShading(parallelogramLight.v0, parallelogramLight.color0, features, ray, hitInfo) +
+                 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.color1, features, ray, hitInfo) +
+                 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge02, parallelogramLight.color2, features, ray, hitInfo) +
+                 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, parallelogramLight.color0, features, ray, hitInfo);
+                 
+             }
+         }
         // TODO: replace this by your own implementation of shading
-        return hitInfo.material.kd;
+         
+        return result;
 
     } else {
         // If shading is disabled, return the albedo of the material.
