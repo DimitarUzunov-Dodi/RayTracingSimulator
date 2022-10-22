@@ -11,20 +11,20 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
 
         glm::vec3 vertex = ray.origin + ray.direction * ray.t;
         glm::vec3 lightDirection = glm::normalize(lightPosition - vertex);
-        float dot = glm::dot(hitInfo.normal, lightDirection);
+        float dotKd = glm::dot(hitInfo.normal, lightDirection);
 
-        if (dot > 0) {
-            diffuse = lightColor * hitInfo.material.kd * dot;
+        if (dotKd > 0) {
+            diffuse = lightColor * hitInfo.material.kd * dotKd;
         }
 
-
-        glm::vec3 reflectVector = glm::normalize(-lightDirection + 2 * glm::dot(lightDirection, hitInfo.normal) * glm::normalize(hitInfo.normal));
-        glm::vec3 viewDirection = glm::normalize(-ray.direction);
         
+        glm::vec3 reflectVector = glm::normalize(-lightDirection + 2 * dotKd * glm::normalize(hitInfo.normal));
+        glm::vec3 viewDirection = glm::normalize(-ray.direction);
+        float dotKs = glm::dot(reflectVector, viewDirection);
 
-        if (glm::dot(lightDirection, hitInfo.normal) > 0 && glm::dot(reflectVector, viewDirection) > 0)
+        if (dotKd > 0 && dotKs > 0)
         {
-            specular = lightColor * hitInfo.material.ks * pow(glm::dot(reflectVector, viewDirection), hitInfo.material.shininess);
+            specular = lightColor * hitInfo.material.ks * pow(dotKs, hitInfo.material.shininess);
         }
         return  diffuse + specular;
     
