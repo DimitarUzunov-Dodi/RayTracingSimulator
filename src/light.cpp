@@ -31,18 +31,20 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& debugColor, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
     Ray shadowRay;
-    shadowRay.direction = samplePos - (ray.origin + ray.direction * ray.t);
-    shadowRay.origin = (ray.origin + ray.direction * ray.t);
-    shadowRay.origin += 0.001f * shadowRay.direction; // Make sure ray does not stop in the surface it bounces off of
-    shadowRay.t = glm::distance(shadowRay.origin, samplePos);
+    glm::vec3 point = (ray.origin + ray.direction * ray.t);
+    shadowRay.direction = glm::normalize(point - samplePos);
+    shadowRay.origin = samplePos;
+    shadowRay.t = glm::distance(samplePos, point) - 0.00001;
+    Ray debugRay = shadowRay;
 
     // TODO: implement this function.
     if (features.enableHardShadow) {
-        if (bvh.intersect(shadowRay, hitInfo, features) || glm::dot(shadowRay.direction, hitInfo.normal) < 0) {
-            drawRay(shadowRay, glm::vec3(1, 0, 0));
+        if (bvh.intersect(shadowRay, hitInfo, features) || glm::dot(shadowRay.direction, hitInfo.normal) * glm::dot(ray.direction, hitInfo.normal) < 0)
+        {
+            drawRay(debugRay, glm::vec3(1,  0, 0));
             return 0.0;
         }
-        drawRay(shadowRay, debugColor);
+        drawRay(debugRay, debugColor);
         return 1.0;
 
     }
