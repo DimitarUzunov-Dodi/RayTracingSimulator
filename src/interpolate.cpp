@@ -5,13 +5,13 @@ glm::vec3 computeBarycentricCoord (const glm::vec3& v0, const glm::vec3& v1, con
 {
     // TODO: implement this function.
     float ABC = glm::length(glm::cross(v1 - v0, v2 - v0))/ 2;
-    float APC = glm::length(glm::cross(p - v0, v2 - v0)) / 2; 
-    float BPC = glm::length(glm::cross(v1 - p, v2 - p)) / 2; 
+    float APC = glm::length(glm::cross(p - v0, v2 - v0))/ 2; 
+    float BPC = glm::length(glm::cross(v1 - p, v2 - p))/ 2; 
 
 
     float u = BPC/ABC;
     float v = APC/ABC;
-    float w = (1 - BPC - APC)/ABC;
+    float w = 1 - u - v;
 
     glm::vec3 barycentricCoord = glm::vec3(u, v, w);
 
@@ -20,9 +20,13 @@ glm::vec3 computeBarycentricCoord (const glm::vec3& v0, const glm::vec3& v1, con
 
 glm::vec3 interpolateNormal (const glm::vec3& n0, const glm::vec3& n1, const glm::vec3& n2, const glm::vec3 barycentricCoord)
 {
-    glm::vec3 vNormal = n0 * barycentricCoord.x + n1 * barycentricCoord.y + n2 * barycentricCoord.z;
+    glm::vec3 a = barycentricCoord.x * n0;
+    glm::vec3 b = barycentricCoord.y * n1;
+    glm::vec3 c = barycentricCoord.z * n2; 
+    
+    glm::vec3 intrNormal = a + b + c;
 
-    return vNormal;
+    return intrNormal;
 }
 
 glm::vec2 interpolateTexCoord (const glm::vec2& t0, const glm::vec2& t1, const glm::vec2& t2, const glm::vec3 barycentricCoord)
