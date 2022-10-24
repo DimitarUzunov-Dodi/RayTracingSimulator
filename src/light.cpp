@@ -30,7 +30,25 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 // returns 1.0 if sample is visible, 0.0 otherwise
 float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& debugColor, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
+    Ray shadowRay;
+    glm::vec3 point = (ray.origin + ray.direction * ray.t);
+    shadowRay.direction = glm::normalize(point - samplePos);
+    shadowRay.origin = samplePos;
+    shadowRay.t = glm::distance(samplePos, point) - 0.00001;
+    Ray debugRay = shadowRay;
+
     // TODO: implement this function.
+    if (features.enableHardShadow) {
+        if (bvh.intersect(shadowRay, hitInfo, features) || glm::dot(shadowRay.direction, hitInfo.normal) * glm::dot(ray.direction, hitInfo.normal) < 0)
+        {
+            drawRay(debugRay, glm::vec3(1,  0, 0));
+            return 0.0;
+        }
+        drawRay(debugRay, debugColor);
+        return 1.0;
+
+    }
+
     return 1.0;
 }
 
@@ -71,29 +89,31 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
 {
     if (features.enableShading) {
         glm::vec3 result = glm::vec3(0, 0, 0);
-
+        glm::vec3 lightContribution;
          //If shading is enabled, compute the contribution from all lights.
          for (const auto& light : scene.lights) {
              if (std::holds_alternative<PointLight>(light)) {
 
-                 const PointLight pointLight = std::get<PointLight>(light);    
-                result += computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+                const PointLight pointLight = std::get<PointLight>(light);    
+                lightContribution = computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+                lightContribution *= testVisibilityLightSample(pointLight.position, lightContribution, bvh, features, ray, hitInfo);
 
              } else if (std::holds_alternative<SegmentLight>(light)) {
 
                  const SegmentLight segmentLight = std::get<SegmentLight>(light);
-                 result += 0.5f * computeShading(segmentLight.endpoint0, segmentLight.color0, features, ray, hitInfo) +
+                 lightContribution = 0.5f * computeShading(segmentLight.endpoint0, segmentLight.color0, features, ray, hitInfo) +
                  0.5f * computeShading(segmentLight.endpoint1, segmentLight.color1, features, ray, hitInfo);
 
              } else if (std::holds_alternative<ParallelogramLight>(light)) {
 
                  const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
-                 result += 0.25f * computeShading(parallelogramLight.v0, parallelogramLight.color0, features, ray, hitInfo) +
+                 lightContribution = 0.25f * computeShading(parallelogramLight.v0, parallelogramLight.color0, features, ray, hitInfo) +
                  0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.color1, features, ray, hitInfo) +
                  0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge02, parallelogramLight.color2, features, ray, hitInfo) +
                  0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, parallelogramLight.color0, features, ray, hitInfo);
-                 
              }
+             result += lightContribution;
+             
          }
         // TODO: replace this by your own implementation of shading
          
