@@ -4,27 +4,160 @@
 #include "scene.h"
 #include "texture.h"
 #include "interpolate.h"
+#include "bounding_volume_hierarchy.h"
 #include <glm/glm.hpp>
 
+float max(float f1, float f2) {
+    return f1 > f2 ? f1 : f2;
+}
+
+
+float min(float f1, float f2)
+{
+    return f1 < f2 ? f1 : f2;
+}
+
+AxisAlignedBox getBounds(std::vector<Triangle> &triangles, Scene* scene) {
+    float xmax = -FLT_MAX;
+    float xmin = FLT_MAX;
+    float ymax = -FLT_MAX;
+    float ymin = FLT_MAX;
+    float zmax = -FLT_MAX;
+    float zmin = FLT_MAX;
+
+    for (const auto& tri : triangles) {
+        const auto v0 = scene->meshes.at(tri.mesh).vertices.at(scene->meshes.at(tri.mesh).triangles.at(tri.triangle).x);
+        const auto v1 = scene->meshes.at(tri.mesh).vertices.at(scene->meshes.at(tri.mesh).triangles.at(tri.triangle).y);
+        const auto v2 = scene->meshes.at(tri.mesh).vertices.at(scene->meshes.at(tri.mesh).triangles.at(tri.triangle).z);
+
+        xmax = max(xmax, v0.position.x);
+        xmax = max(xmax, v1.position.x);
+        xmax = max(xmax, v2.position.x);
+
+        ymax = max(ymax, v0.position.y);
+        ymax = max(ymax, v1.position.y);
+        ymax = max(ymax, v2.position.y);
+
+        zmax = max(zmax, v0.position.z);
+        zmax = max(zmax, v1.position.z);
+        zmax = max(zmax, v2.position.z);
+
+        xmin = min(xmin, v0.position.x);
+        xmin = min(xmin, v1.position.x);
+        xmin = min(xmin, v2.position.x);
+
+        ymin = min(ymin, v0.position.y);
+        ymin = min(ymin, v1.position.y);
+        ymin = min(ymin, v2.position.y);
+
+        zmin = min(zmin, v0.position.z);
+        zmin = min(zmin, v1.position.z);
+        zmin = min(zmin, v2.position.z);
+    }
+    AxisAlignedBox ret;
+    ret.lower = glm::vec3(xmin, ymin, zmin);
+    ret.upper = glm::vec3(xmax, ymax, zmax);
+    return ret;
+}
 
 BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
 {
-    // TODO: implement BVH construction.
+
+    std::vector<Triangle> triangles;
+    int m = 0;
+    for (const auto& mesh : m_pScene->meshes) {
+        for (int t = 0; t < mesh.triangles.size(); t++) { 
+            triangles.push_back(Triangle(m, t));
+        }
+        m++;
+    }
+    AxisAlignedBox box = getBounds(triangles, m_pScene);
+    Node root;
+    root.bounds = box;
+    root.internal = false;
+    root.triangles = triangles;
+    root.level = 0;
+    m_numLevels = 1;
+    m_numLeaves = 1;
+    nodes.push_back(root);
+    subdivide(7, 0);
+}
+
+
+void BoundingVolumeHierarchy::subdivide(int limit, int node)
+{
+    int level = nodes.at(node).level;
+    bool divided = false;
+    if (level >= limit)
+        return;
+
+
+    std::vector<Triangle> otherHalf;
+    
+    int size = nodes.at(node).triangles.size();
+    if (size > 1) {
+
+        sortByAxis(nodes.at(node).triangles, level % 3, m_pScene);
+        divided = true;
+        m_numLeaves ++;
+
+        std::vector<Triangle> left;
+        std::vector<Triangle> right;
+        std::vector<Triangle>::iterator middleItr(nodes.at(node).triangles.begin() + nodes.at(node).triangles.size() / 2);
+
+        for (auto it = nodes.at(node).triangles.begin(); it != nodes.at(node).triangles.end(); ++it) {
+            if (std::distance(it, middleItr) > 0) {
+                left.push_back(*it);
+            } else {
+                right.push_back(*it);
+            }
+        }
+
+        Node n1;
+        n1.internal = false;
+        n1.triangles = left;
+        n1.level = level + 1;
+        n1.bounds = getBounds(n1.triangles, m_pScene);
+
+        Node n2;
+        n2.internal = false;
+        n2.triangles = right;
+        n2.level = level + 1;
+        n2.bounds = getBounds(n2.triangles, m_pScene);
+
+        nodes.at(node).internal = true;       
+        nodes.at(node).triangles.clear();
+        nodes.at(node).children.push_back(nodes.size());
+        int n1pos = nodes.size();
+        nodes.push_back(n1);
+        nodes.at(node).children.push_back(nodes.size());
+
+        int n2pos = nodes.size();
+        nodes.push_back(n2);
+
+        if(n1.triangles.size() > 1) subdivide(limit, n1pos);
+        if(n2.triangles.size() > 1) subdivide(limit, n2pos);
+       
+    }
+
+    if (divided) {
+        m_numLevels = max(m_numLevels, level + 1);
+    }
 }
 
 // Return the depth of the tree that you constructed. This is used to tell the
 // slider in the UI how many steps it should display for Visual Debug 1.
 int BoundingVolumeHierarchy::numLevels() const
 {
-    return 1;
+    return m_numLevels;
 }
 
 // Return the number of leaf nodes in the tree that you constructed. This is used to tell the
 // slider in the UI how many steps it should display for Visual Debug 2.
 int BoundingVolumeHierarchy::numLeaves() const
 {
-    return 1;
+    return m_numLeaves;
 }
 
 // Use this function to visualize your BVH. This is useful for debugging. Use the functions in
@@ -35,11 +168,11 @@ void BoundingVolumeHierarchy::debugDrawLevel(int level)
     // Draw the AABB as a transparent green box.
     //AxisAlignedBox aabb{ glm::vec3(-0.05f), glm::vec3(0.05f, 1.05f, 1.05f) };
     //drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
-
-    // Draw the AABB as a (white) wireframe box.
-    AxisAlignedBox aabb { glm::vec3(0.0f), glm::vec3(0.0f, 1.05f, 1.05f) };
-    //drawAABB(aabb, DrawMode::Wireframe);
-    drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
+    for (auto& n : nodes) {
+        if (n.level == level) {
+            drawAABB(n.bounds, DrawMode::Wireframe, glm::vec3(1.00f, 0.05f, 0.05f), 0.9f);
+        }
+    }
 }
 
 
@@ -54,13 +187,72 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
     //drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
 
     // Draw the AABB as a (white) wireframe box.
-    AxisAlignedBox aabb { glm::vec3(0.0f), glm::vec3(0.0f, 1.05f, 1.05f) };
     //drawAABB(aabb, DrawMode::Wireframe);
-    drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
+    int i = 1;
+    for (auto& n : nodes) {
+        if (n.internal == false) {
+            if (i == leafIdx) {
+                drawAABB(n.bounds, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.3f);
+                for (auto& t : n.triangles) {
+                    drawTriangle(m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x), 
+                                 m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y), 
+                                 m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z));
+                }
+            }
+            i++;
+        }
+    }
+    //drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
 
     // once you find the leaf node, you can use the function drawTriangle (from draw.h) to draw the contained primitives
 }
 
+Scene* tempScene;
+int tempAxis;
+
+struct CompareTriangles {
+    CompareTriangles(Scene* tempScene, int tempAxis)
+    {
+        this->tempScene = tempScene;
+        this->tempAxis = tempAxis;
+    }
+    bool operator()(Triangle& t1, Triangle& t2)
+    {
+        auto mesh1 = &tempScene->meshes.at(t1.mesh);
+
+        glm::vec3 center1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position + 
+                             mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position + 
+                             mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position) / 3.0f;
+
+        auto mesh2 = &tempScene->meshes.at(t2.mesh);
+
+
+        glm::vec3 center2 = (mesh2->vertices.at(mesh2->triangles.at(t2.triangle).x).position + 
+                             mesh2->vertices.at(mesh2->triangles.at(t2.triangle).y).position + 
+                             mesh2->vertices.at(mesh2->triangles.at(t2.triangle).z).position) / 3.0f;
+
+        switch (tempAxis) {
+        case 0:
+            return center1.x < center2.x;
+        case 1:
+            return center1.y < center2.y;
+        case 2:
+            return center1.z < center2.z;
+        default:
+            return false;
+        }
+    }
+
+    Scene *tempScene;
+    int tempAxis;
+};
+
+
+void BoundingVolumeHierarchy::sortByAxis(std::vector<Triangle>& triangles, int axis, Scene* scene) {
+    tempScene = scene;
+    tempAxis = axis;
+    sort(triangles.begin(), triangles.end(), CompareTriangles(scene, axis));
+}
 
 // Return true if something is hit, returns false otherwise. Only find hits if they are closer than t stored
 // in the ray and if the intersection is on the correct side of the origin (the new t >= 0). Replace the code
@@ -94,4 +286,14 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
         return false;
     }
+}
+
+Triangle::Triangle(int mesh, int triangle)
+{
+    this->mesh = mesh;
+    this->triangle = triangle;
+}
+
+Node::Node()
+{
 }

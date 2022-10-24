@@ -7,10 +7,31 @@
 // Forward declaration.
 struct Scene;
 
+class Triangle {
+public:
+    int mesh;
+    int triangle;
+    Triangle(int mesh, int triangle);
+};
+
+class Node {
+public:
+    Node();
+    bool internal = false;
+    int level = 0;
+    std::vector<int> children;
+    std::vector<Triangle> triangles;
+    AxisAlignedBox bounds;
+};
+
 class BoundingVolumeHierarchy {
 public:
     // Constructor. Receives the scene and builds the bounding volume hierarchy.
     BoundingVolumeHierarchy(Scene* pScene);
+
+    void subdivide(int limit, int node);
+
+    static void sortByAxis(std::vector<Triangle>& triangles, int axis, Scene* scene);
 
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
@@ -34,4 +55,5 @@ private:
     int m_numLevels;
     int m_numLeaves;
     Scene* m_pScene;
+    std::vector<Node> nodes;
 };
