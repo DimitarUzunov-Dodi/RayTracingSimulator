@@ -5,25 +5,80 @@
 DISABLE_WARNINGS_PUSH()
 #include <glm/geometric.hpp>
 DISABLE_WARNINGS_POP()
+#include <iostream>
 #include <cmath>
+#include <random>
 
+//Provides random double number in range (start,end) with uniform distribution
+double getRandomNumInRange(double start, double end)
+{
+    std::default_random_engine defEngine;
+    std::uniform_real_distribution<double> dDistro(start, end);
+    return dDistro(defEngine);
+}
+
+//Computes area of triangle plane
+float area(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
+{
+    return glm::length(glm::cross(v1 - v0, v2 - v0)) / 2.0;
+}
+
+//Computes average of two doubles
+double avg(double x, double y) {
+    return (x + y) / 2;
+}
+
+//Provides random point on line between "start" and "end"
+glm::vec3 getRandomPoint(const glm::vec3& start, const glm::vec3& end) {
+    return glm::vec3(getRandomNumInRange(start.x, end.x), getRandomNumInRange(start.y, end.y), getRandomNumInRange(start.z, end.z));
+}
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
 void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, glm::vec3& color)
 {
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
-    // TODO: implement this function.
+    position = getRandomPoint(segmentLight.endpoint0, segmentLight.endpoint1);
+    glm::vec3 avgV = ((position - segmentLight.endpoint0) / (segmentLight.endpoint1 - segmentLight.endpoint0));
+    double percentage = avg(avg(avgV.x, avgV.y), avgV.z);
+    color = (float)(1.0 - percentage) * segmentLight.color0 + (float)percentage * segmentLight.color1;
 }
 
 // samples a parallelogram light source
 // you should fill in the vectors position and color with the sampled position and color
 void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm::vec3& position, glm::vec3& color)
-{
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
-    // TODO: implement this function.
+{   
+    glm::vec3 edge01 = glm::normalize(parallelogramLight.edge01),
+              edge02 = glm::normalize(parallelogramLight.edge02);
+
+    float maxT1 = (parallelogramLight.edge01 / edge01).x,
+          maxT2 = (parallelogramLight.edge02 / edge02).x;
+
+    float t1 = getRandomNumInRange(0, maxT1), t2 = getRandomNumInRange(0, maxT2);
+    glm::vec3 pointA = parallelogramLight.v0 + t1 * edge01,
+              pointB = parallelogramLight.v0 + t2 * edge02;
+
+    position = parallelogramLight.v0 + (t1 * edge01) + (t2 * edge02);   
+  
+    float parallelogramArea = area(parallelogramLight.v0, parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.v0 + parallelogramLight.edge02) + 
+        area(parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.v0 + parallelogramLight.edge02, parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02);
+
+    
+    color = 
+          (area(parallelogramLight.v0, pointA, pointB) 
+            + area(pointA, pointB, position)
+          ) / parallelogramArea * parallelogramLight.color0 
+
+        + (area(position, pointB, pointA + parallelogramLight.edge02) 
+            + area(parallelogramLight.v0 + parallelogramLight.edge02, pointB, pointA + parallelogramLight.edge02)
+          ) / parallelogramArea * parallelogramLight.color1
+
+        + (area(pointA, position, pointB + parallelogramLight.edge01) 
+            + area(pointA, parallelogramLight.v0 + parallelogramLight.edge01, pointB + parallelogramLight.edge01)
+          ) / parallelogramArea * parallelogramLight.color2
+
+        + (area(position, pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02)
+            + area(pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02, parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02)
+          ) / parallelogramArea * parallelogramLight.color3;
 }
 
 // test the visibility at a given light sample
