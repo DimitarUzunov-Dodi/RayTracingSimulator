@@ -20,7 +20,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
         }
 
         // Draw a white debug ray if the ray hits.
-        drawRay(ray, glm::vec3(1.0f));
+        drawRay(ray, Lo);
 
         // Set the color of the pixel to white if the ray hits.
         return Lo;
