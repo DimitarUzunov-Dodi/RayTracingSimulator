@@ -5,7 +5,6 @@
 DISABLE_WARNINGS_PUSH()
 #include <glm/geometric.hpp>
 DISABLE_WARNINGS_POP()
-#include <iostream>
 #include <cmath>
 #include <random>
 
@@ -48,36 +47,36 @@ void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, g
 void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm::vec3& position, glm::vec3& color)
 {   
     glm::vec3 edge01 = glm::normalize(parallelogramLight.edge01),
-              edge02 = glm::normalize(parallelogramLight.edge02);
+              edge02 = glm::normalize(parallelogramLight.edge02); //Normalized edge01/02
 
     float maxT1 = (parallelogramLight.edge01 / edge01).x,
-          maxT2 = (parallelogramLight.edge02 / edge02).x;
+          maxT2 = (parallelogramLight.edge02 / edge02).x; //t values such maxT1 * edge01 = parallelogramLight.edge01
 
-    float t1 = getRandomNumInRange(0, maxT1), t2 = getRandomNumInRange(0, maxT2);
+    float t1 = getRandomNumInRange(0, maxT1), t2 = getRandomNumInRange(0, maxT2); //Random t_val
     glm::vec3 pointA = parallelogramLight.v0 + t1 * edge01,
-              pointB = parallelogramLight.v0 + t2 * edge02;
+              pointB = parallelogramLight.v0 + t2 * edge02; //Sampled points on the edges
 
-    position = parallelogramLight.v0 + (t1 * edge01) + (t2 * edge02);   
+    position = parallelogramLight.v0 + (t1 * edge01) + (t2 * edge02); //Sampled point  
   
     float parallelogramArea = area(parallelogramLight.v0, parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.v0 + parallelogramLight.edge02) + 
         area(parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.v0 + parallelogramLight.edge02, parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02);
-
+    //Area of whole parallelogram
     
     color = 
           (area(parallelogramLight.v0, pointA, pointB) 
             + area(pointA, pointB, position)
           ) / parallelogramArea * parallelogramLight.color0 
 
-        + (area(position, pointB, pointA + parallelogramLight.edge02) 
-            + area(parallelogramLight.v0 + parallelogramLight.edge02, pointB, pointA + parallelogramLight.edge02)
+        + (area(pointA, parallelogramLight.v0 + parallelogramLight.edge01, position) 
+            + area(position, parallelogramLight.v0 + parallelogramLight.edge01, pointB + parallelogramLight.edge01)
           ) / parallelogramArea * parallelogramLight.color1
 
-        + (area(pointA, position, pointB + parallelogramLight.edge01) 
-            + area(pointA, parallelogramLight.v0 + parallelogramLight.edge01, pointB + parallelogramLight.edge01)
+        + (area(pointB, position, parallelogramLight.v0 + parallelogramLight.edge02) 
+            + area(position, parallelogramLight.v0 + parallelogramLight.edge02, pointA + parallelogramLight.edge02)
           ) / parallelogramArea * parallelogramLight.color2
 
         + (area(position, pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02)
-            + area(pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02, parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02)
+              + area(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02)
           ) / parallelogramArea * parallelogramLight.color3;
 }
 
