@@ -81,7 +81,7 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     m_numLevels = 1;
     m_numLeaves = 1;
     nodes.push_back(root);
-    subdivide(7, 0);
+    subdivide(20, 0);
 }
 
 
@@ -209,7 +209,7 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
 
 Scene* tempScene;
 int tempAxis;
-
+/*
 struct CompareTriangles {
     CompareTriangles(Scene* tempScene, int tempAxis)
     {
@@ -246,12 +246,39 @@ struct CompareTriangles {
     Scene *tempScene;
     int tempAxis;
 };
+*/
+
+bool sortTriangles(Triangle& t1, Triangle&t2) {
+
+    auto mesh1 = &tempScene->meshes.at(t1.mesh);
+    auto mesh2 = &tempScene->meshes.at(t2.mesh);
+    float c1, c2;
+    switch (tempAxis) {
+    case 0:
+        c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.x +  mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.x + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.x); 
+       
+        c2 = (mesh2->vertices.at(mesh1->triangles.at(t1.triangle).x).position.x + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).y).position.x + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).z).position.x); 
+        return c1 < c2;
+    case 1:
+        c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.y + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.y + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.y);
+
+        c2 = (mesh2->vertices.at(mesh1->triangles.at(t1.triangle).x).position.y + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).y).position.y + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).z).position.y);
+        return c1 < c2;
+    case 2:
+        c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.z + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.z + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.z);
+
+        c2 = (mesh2->vertices.at(mesh1->triangles.at(t1.triangle).x).position.z + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).y).position.z + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).z).position.z);
+        return c1 < c2;
+    default:
+        return false;
+    }
+}
 
 
 void BoundingVolumeHierarchy::sortByAxis(std::vector<Triangle>& triangles, int axis, Scene* scene) {
     tempScene = scene;
     tempAxis = axis;
-    sort(triangles.begin(), triangles.end(), CompareTriangles(scene, axis));
+    sort(triangles.begin(), triangles.end(), sortTriangles);
 }
 
 // Return true if something is hit, returns false otherwise. Only find hits if they are closer than t stored
