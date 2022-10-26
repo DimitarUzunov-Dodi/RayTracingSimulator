@@ -2,11 +2,14 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
+#include "filter.h"
 #include <framework/trackball.h>
+#include <iostream>
 #ifdef NDEBUG
 #include <omp.h>
 #endif
 
+#include <vector>
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
     HitInfo hitInfo;
@@ -32,14 +35,19 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features)
+void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect)
 {
+    std::cout << "bloom threshold " << thresholdForBloomEffect << "\n";
     glm::ivec2 windowResolution = screen.resolution();
     // Enable multi threading in Release mode
+    /*
 #ifdef NDEBUG
 #pragma omp parallel for schedule(guided)
-#endif
+#endif */
+    std::vector<std::vector<glm::vec3>> toBeProcessed, boxFiltered;
+
     for (int y = 0; y < windowResolution.y; y++) {
+        toBeProcessed.push_back(std::vector<glm::vec3> {});
         for (int x = 0; x != windowResolution.x; x++) {
             // NOTE: (-1, -1) at the bottom left of the screen, (+1, +1) at the top right of the screen.
             const glm::vec2 normalizedPixelPos {
@@ -47,7 +55,21 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
-            screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay, features));
+            toBeProcessed[y].push_back(getFinalColor(scene, bvh, cameraRay, features));
+        }
+    }
+
+    if (features.extra.enableBloomEffect) {
+        auto threshold = getThresholdedImage(toBeProcessed, thresholdForBloomEffect); // Threshold filter
+        boxFiltered = boxFilter(threshold); // Box filter (average) for the thresholded image
+    }
+    //Output colors to actual window
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            if (!features.extra.enableBloomEffect)
+                screen.setPixel(x, y, toBeProcessed[y][x]);
+            else
+                screen.setPixel(x, y, toBeProcessed[y][x] + boxFiltered[y][x]);
         }
     }
 }

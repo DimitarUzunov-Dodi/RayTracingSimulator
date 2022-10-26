@@ -36,6 +36,7 @@ enum class ViewMode {
 };
 
 int debugBVHLeafId = 0;
+float thresholdForBloomEffect = 0.0;
 
 static void setOpenGLMatrices(const Trackball& camera);
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
@@ -151,6 +152,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Glossy reflections", &config.features.extra.enableGlossyReflection);
                 ImGui::Checkbox("Transparency", &config.features.extra.enableTransparency);
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);
+                ImGui::DragFloat("Threshold for bloom effect", &thresholdForBloomEffect, 0.01f, 0.0f, 1.0f);
             }
             ImGui::Separator();
 
@@ -180,7 +182,8 @@ int main(int argc, char** argv)
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, config.features);
+                    std::cout << "threshold" << thresholdForBloomEffect << std::endl;
+                    renderRayTracing(scene, camera, bvh, screen, config.features, thresholdForBloomEffect);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -352,7 +355,7 @@ int main(int argc, char** argv)
             } break;
             case ViewMode::RayTracing: {
                 screen.clear(glm::vec3(0.0f));
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
                 screen.setPixel(0, 0, glm::vec3(1.0f));
                 screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
             } break;
@@ -405,7 +408,7 @@ int main(int argc, char** argv)
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
                 const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
