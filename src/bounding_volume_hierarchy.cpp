@@ -90,6 +90,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                     hitInfo.material = mesh.material;
                     hitInfo.normal = glm::normalize(glm::cross(v1.position - v0.position, v2.position - v0.position));
                     hitInfo.barycentricCoord = computeBarycentricCoord(v0.position, v1.position, v2.position, ray.origin + ray.direction * ray.t);
+                    hitInfo.texCoord = interpolateTexCoord(v0.texCoord, v1.texCoord, v2.texCoord, hitInfo.barycentricCoord);
                     hit = true;
 
                     norm = Ray(ray.origin + ray.direction * ray.t, hitInfo.normal, 0.5f);
@@ -103,6 +104,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
             }
             
         }
+        
         if (features.enableNormalInterp && hit == true) {
 
             drawRay(normalA, glm::vec3(0.0f, 1.0f, 1.0f));
