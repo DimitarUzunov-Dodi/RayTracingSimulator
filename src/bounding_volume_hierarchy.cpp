@@ -17,7 +17,7 @@ float min(float f1, float f2)
     return f1 < f2 ? f1 : f2;
 }
 
-AxisAlignedBox getBounds(std::vector<Triangle> &triangles, Scene* scene) {
+AxisAlignedBox getBounds(std::vector<TriangleOrChild> &triangles, Scene* scene) {
     float xmax = -FLT_MAX;
     float xmin = FLT_MAX;
     float ymax = -FLT_MAX;
@@ -26,9 +26,9 @@ AxisAlignedBox getBounds(std::vector<Triangle> &triangles, Scene* scene) {
     float zmin = FLT_MAX;
 
     for (const auto& tri : triangles) {
-        const auto v0 = scene->meshes.at(tri.mesh).vertices.at(scene->meshes.at(tri.mesh).triangles.at(tri.triangle).x);
-        const auto v1 = scene->meshes.at(tri.mesh).vertices.at(scene->meshes.at(tri.mesh).triangles.at(tri.triangle).y);
-        const auto v2 = scene->meshes.at(tri.mesh).vertices.at(scene->meshes.at(tri.mesh).triangles.at(tri.triangle).z);
+        const auto v0 = scene->meshes.at(tri.meshOrChild).vertices.at(scene->meshes.at(tri.meshOrChild).triangles.at(tri.triangle).x);
+        const auto v1 = scene->meshes.at(tri.meshOrChild).vertices.at(scene->meshes.at(tri.meshOrChild).triangles.at(tri.triangle).y);
+        const auto v2 = scene->meshes.at(tri.meshOrChild).vertices.at(scene->meshes.at(tri.meshOrChild).triangles.at(tri.triangle).z);
 
         xmax = max(xmax, v0.position.x);
         xmax = max(xmax, v1.position.x);
@@ -64,11 +64,16 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
 {
 
-    std::vector<Triangle> triangles;
+    std::vector<TriangleOrChild> triangles;
     int m = 0;
+    int bytes = 0;
+    for (const auto& mesh : m_pScene->meshes) {
+        bytes += mesh.triangles.size();
+    }
+    triangles.reserve(bytes);
     for (const auto& mesh : m_pScene->meshes) {
         for (int t = 0; t < mesh.triangles.size(); t++) { 
-            triangles.push_back(Triangle(m, t));
+            triangles.push_back(TriangleOrChild(m, t));
         }
         m++;
     }
@@ -76,7 +81,7 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     Node root;
     root.bounds = box;
     root.internal = false;
-    root.triangles = triangles;
+    root.trianglesOrChildren = triangles;
     root.level = 0;
     m_numLevels = 1;
     m_numLeaves = 1;
@@ -93,20 +98,20 @@ void BoundingVolumeHierarchy::subdivide(int limit, int node)
         return;
 
 
-    std::vector<Triangle> otherHalf;
+    std::vector<TriangleOrChild> otherHalf;
     
-    int size = nodes.at(node).triangles.size();
+    int size = nodes.at(node).trianglesOrChildren.size();
     if (size > 1) {
 
-        sortByAxis(nodes.at(node).triangles, level % 3, m_pScene);
+        sortByAxis(nodes.at(node).trianglesOrChildren, level % 3, m_pScene);
         divided = true;
         m_numLeaves ++;
 
-        std::vector<Triangle> left;
-        std::vector<Triangle> right;
-        std::vector<Triangle>::iterator middleItr(nodes.at(node).triangles.begin() + nodes.at(node).triangles.size() / 2);
+        std::vector<TriangleOrChild> left;
+        std::vector<TriangleOrChild> right;
+        std::vector<TriangleOrChild>::iterator middleItr(nodes.at(node).trianglesOrChildren.begin() + nodes.at(node).trianglesOrChildren.size() / 2);
 
-        for (auto it = nodes.at(node).triangles.begin(); it != nodes.at(node).triangles.end(); ++it) {
+        for (auto it = nodes.at(node).trianglesOrChildren.begin(); it != nodes.at(node).trianglesOrChildren.end(); ++it) {
             if (std::distance(it, middleItr) > 0) {
                 left.push_back(*it);
             } else {
@@ -116,28 +121,30 @@ void BoundingVolumeHierarchy::subdivide(int limit, int node)
 
         Node n1;
         n1.internal = false;
-        n1.triangles = left;
+        n1.trianglesOrChildren = left;
         n1.level = level + 1;
-        n1.bounds = getBounds(n1.triangles, m_pScene);
+        n1.bounds = getBounds(n1.trianglesOrChildren, m_pScene);
 
         Node n2;
         n2.internal = false;
-        n2.triangles = right;
+        n2.trianglesOrChildren = right;
         n2.level = level + 1;
-        n2.bounds = getBounds(n2.triangles, m_pScene);
+        n2.bounds = getBounds(n2.trianglesOrChildren, m_pScene);
 
         nodes.at(node).internal = true;       
-        nodes.at(node).triangles.clear();
-        nodes.at(node).children.push_back(nodes.size());
+        nodes.at(node).trianglesOrChildren.clear();
+        nodes.at(node).trianglesOrChildren.push_back(TriangleOrChild(nodes.size(), 0));
         int n1pos = nodes.size();
         nodes.push_back(n1);
-        nodes.at(node).children.push_back(nodes.size());
+        nodes.at(node).trianglesOrChildren.push_back(TriangleOrChild(nodes.size(), 0));
 
         int n2pos = nodes.size();
         nodes.push_back(n2);
 
-        if(n1.triangles.size() > 1) subdivide(limit, n1pos);
-        if(n2.triangles.size() > 1) subdivide(limit, n2pos);
+        if (n1.trianglesOrChildren.size() > 1)
+            subdivide(limit, n1pos);
+        if (n2.trianglesOrChildren.size() > 1)
+            subdivide(limit, n2pos);
        
     }
 
@@ -193,10 +200,10 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
         if (n.internal == false) {
             if (i == leafIdx) {
                 drawAABB(n.bounds, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.3f);
-                for (auto& t : n.triangles) {
-                    drawTriangle(m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x), 
-                                 m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y), 
-                                 m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z));
+                for (auto& t : n.trianglesOrChildren) {
+                    drawTriangle(m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).x), 
+                                 m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).y), 
+                                 m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).z));
                 }
             }
             i++;
@@ -248,10 +255,10 @@ struct CompareTriangles {
 };
 */
 
-bool sortTriangles(Triangle& t1, Triangle&t2) {
+bool sortTriangles(TriangleOrChild& t1, TriangleOrChild&t2) {
 
-    auto mesh1 = &tempScene->meshes.at(t1.mesh);
-    auto mesh2 = &tempScene->meshes.at(t2.mesh);
+    auto mesh1 = &tempScene->meshes.at(t1.meshOrChild);
+    auto mesh2 = &tempScene->meshes.at(t2.meshOrChild);
     float c1, c2;
     switch (tempAxis) {
     case 0:
@@ -275,7 +282,7 @@ bool sortTriangles(Triangle& t1, Triangle&t2) {
 }
 
 
-void BoundingVolumeHierarchy::sortByAxis(std::vector<Triangle>& triangles, int axis, Scene* scene) {
+void BoundingVolumeHierarchy::sortByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene) {
     tempScene = scene;
     tempAxis = axis;
     sort(triangles.begin(), triangles.end(), sortTriangles);
@@ -315,9 +322,9 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
     }
 }
 
-Triangle::Triangle(int mesh, int triangle)
+TriangleOrChild::TriangleOrChild(int mesh, int triangle)
 {
-    this->mesh = mesh;
+    this->meshOrChild = mesh;
     this->triangle = triangle;
 }
 

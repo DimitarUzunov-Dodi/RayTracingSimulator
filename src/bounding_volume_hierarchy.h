@@ -7,11 +7,11 @@
 // Forward declaration.
 struct Scene;
 
-class Triangle {
+class TriangleOrChild {
 public:
-    int mesh;
+    int meshOrChild;
     int triangle;
-    Triangle(int mesh, int triangle);
+    TriangleOrChild(int meshOrChild, int triangle);
 };
 
 class Node {
@@ -19,8 +19,7 @@ public:
     Node();
     bool internal = false;
     int level = 0;
-    std::vector<int> children;
-    std::vector<Triangle> triangles;
+    std::vector<TriangleOrChild> trianglesOrChildren;
     AxisAlignedBox bounds;
 };
 
@@ -31,7 +30,7 @@ public:
 
     void subdivide(int limit, int node);
 
-    static void sortByAxis(std::vector<Triangle>& triangles, int axis, Scene* scene);
+    static void sortByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene);
 
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
