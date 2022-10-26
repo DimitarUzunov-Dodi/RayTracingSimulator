@@ -67,10 +67,18 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
 // by a bounding volume hierarchy acceleration structure as described in the assignment. You can change any
 // file you like, including bounding_volume_hierarchy.h.
 bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Features& features) const
-{
+{   
     // If BVH is not enabled, use the naive implementation.
     if (!features.enableAccelStructure) {
         bool hit = false;
+        Ray norm;
+        
+        Ray normal;
+        Ray normalA;
+        Ray normalB;
+        Ray normalC;
+       
+       
         // Intersect with all triangles of all meshes.
         for (const auto& mesh : m_pScene->meshes) {
             for (const auto& tri : mesh.triangles) {
@@ -78,11 +86,32 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                 const auto v1 = mesh.vertices[tri[1]];
                 const auto v2 = mesh.vertices[tri[2]];
                 if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+
                     hitInfo.material = mesh.material;
                     hitInfo.normal = glm::normalize(glm::cross(v1.position - v0.position, v2.position - v0.position));
+                    hitInfo.barycentricCoord = computeBarycentricCoord(v0.position, v1.position, v2.position, ray.origin + ray.direction * ray.t);
                     hit = true;
+
+                    norm = Ray(ray.origin + ray.direction * ray.t, hitInfo.normal, 0.5f);
+                    
+                        normalA = Ray(v0.position, v0.normal, 0.5f);
+                        normalB = Ray(v1.position, v1.normal, 0.5f);
+                        normalC = Ray(v2.position, v2.normal, 0.5f);
+                        normal = Ray(ray.origin + ray.direction * ray.t, interpolateNormal(v0.normal, v1.normal, v2.normal, hitInfo.barycentricCoord), 0.5f);
+                      
                 }
             }
+            
+        }
+        if (features.enableNormalInterp && hit == true) {
+
+            drawRay(normalA, glm::vec3(0.0f, 1.0f, 1.0f));
+            drawRay(normalB, glm::vec3(0.0f, 1.0f, 0.5f));
+            drawRay(normalC, glm::vec3(0.0f, 0.0f, 1.0f));
+            drawRay(normal, glm::vec3(0.0f, 0.5f, 1.0f));
+
+        } else if (hit == true) {
+            drawRay(norm, glm::vec3(0.0f, 0.5f, 1.0f));
         }
         // Intersect with spheres.
         for (const auto& sphere : m_pScene->spheres)
