@@ -7,7 +7,7 @@
 #include <omp.h>
 #endif
 
-#define MAX_RENDER_DEPTH 5000
+#define MAX_RENDER_DEPTH 50 
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
@@ -18,6 +18,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 
         if (features.enableRecursive) {
             Ray reflection = computeReflectionRay(ray, hitInfo);
+            reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
             Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
         }
 
