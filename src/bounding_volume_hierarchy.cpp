@@ -86,7 +86,7 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     m_numLevels = 1;
     m_numLeaves = 1;
     nodes.push_back(root);
-    subdivide(20, 0);
+    subdivide(MAX_LEVELS, 0);
 }
 
 
