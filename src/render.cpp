@@ -7,16 +7,19 @@
 #include <omp.h>
 #endif
 
+#define MAX_RENDER_DEPTH 50 
+
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
     HitInfo hitInfo;
-    if (bvh.intersect(ray, hitInfo, features)) {
+    if (rayDepth <= MAX_RENDER_DEPTH && bvh.intersect(ray, hitInfo, features)) {
 
         glm::vec3 Lo = computeLightContribution(scene, bvh, features, ray, hitInfo);
 
         if (features.enableRecursive) {
             Ray reflection = computeReflectionRay(ray, hitInfo);
-            // TODO: put your own implementation of recursive ray tracing here.
+            reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
+            Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
         }
 
         // Draw a white debug ray if the ray hits.
