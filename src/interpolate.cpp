@@ -31,6 +31,11 @@ glm::vec3 interpolateNormal (const glm::vec3& n0, const glm::vec3& n1, const glm
 
 glm::vec2 interpolateTexCoord (const glm::vec2& t0, const glm::vec2& t1, const glm::vec2& t2, const glm::vec3 barycentricCoord)
 {
-// TODO: implement this function.
-    return glm::vec2(0.0);
+    glm::vec2 a = barycentricCoord.x * t0;
+    glm::vec2 b = barycentricCoord.y * t1;
+    glm::vec2 c = barycentricCoord.z * t2;
+
+    glm::vec2 intrCoord = a + b + c;
+
+    return intrCoord;
 }

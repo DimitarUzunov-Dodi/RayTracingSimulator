@@ -2,6 +2,7 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
+#include "texture.h"
 #include <framework/trackball.h>
 #ifdef NDEBUG
 #include <omp.h>
@@ -25,6 +26,11 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
         // Draw a white debug ray if the ray hits.
         drawRay(ray, Lo);
 
+        //apply the texture to the textured objects
+        if (features.enableTextureMapping && hitInfo.material.kdTexture) {
+
+            return acquireTexel(*hitInfo.material.kdTexture, hitInfo.texCoord, features);   
+        }
         // Set the color of the pixel to white if the ray hits.
         return Lo;
     } else {
