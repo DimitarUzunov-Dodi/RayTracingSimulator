@@ -216,45 +216,6 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
 
 Scene* tempScene;
 int tempAxis;
-/*
-struct CompareTriangles {
-    CompareTriangles(Scene* tempScene, int tempAxis)
-    {
-        this->tempScene = tempScene;
-        this->tempAxis = tempAxis;
-    }
-    bool operator()(Triangle& t1, Triangle& t2)
-    {
-        auto mesh1 = &tempScene->meshes.at(t1.mesh);
-
-        glm::vec3 center1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position + 
-                             mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position + 
-                             mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position) / 3.0f;
-
-        auto mesh2 = &tempScene->meshes.at(t2.mesh);
-
-
-        glm::vec3 center2 = (mesh2->vertices.at(mesh2->triangles.at(t2.triangle).x).position + 
-                             mesh2->vertices.at(mesh2->triangles.at(t2.triangle).y).position + 
-                             mesh2->vertices.at(mesh2->triangles.at(t2.triangle).z).position) / 3.0f;
-
-        switch (tempAxis) {
-        case 0:
-            return center1.x < center2.x;
-        case 1:
-            return center1.y < center2.y;
-        case 2:
-            return center1.z < center2.z;
-        default:
-            return false;
-        }
-    }
-
-    Scene *tempScene;
-    int tempAxis;
-};
-*/
-
 bool sortTriangles(TriangleOrChild& t1, TriangleOrChild&t2) {
 
     auto mesh1 = &tempScene->meshes.at(t1.meshOrChild);
@@ -262,19 +223,19 @@ bool sortTriangles(TriangleOrChild& t1, TriangleOrChild&t2) {
     float c1, c2;
     switch (tempAxis) {
     case 0:
-        c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.x +  mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.x + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.x); 
+        c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.x + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.x + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.x); 
        
-        c2 = (mesh2->vertices.at(mesh1->triangles.at(t1.triangle).x).position.x + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).y).position.x + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).z).position.x); 
+        c2 = (mesh2->vertices.at(mesh2->triangles.at(t2.triangle).x).position.x + mesh2->vertices.at(mesh2->triangles.at(t2.triangle).y).position.x + mesh2->vertices.at(mesh2->triangles.at(t2.triangle).z).position.x); 
         return c1 < c2;
     case 1:
         c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.y + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.y + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.y);
 
-        c2 = (mesh2->vertices.at(mesh1->triangles.at(t1.triangle).x).position.y + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).y).position.y + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).z).position.y);
+        c2 = (mesh2->vertices.at(mesh2->triangles.at(t2.triangle).x).position.y + mesh2->vertices.at(mesh2->triangles.at(t2.triangle).y).position.y + mesh2->vertices.at(mesh2->triangles.at(t2.triangle).z).position.y);
         return c1 < c2;
     case 2:
         c1 = (mesh1->vertices.at(mesh1->triangles.at(t1.triangle).x).position.z + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).y).position.z + mesh1->vertices.at(mesh1->triangles.at(t1.triangle).z).position.z);
 
-        c2 = (mesh2->vertices.at(mesh1->triangles.at(t1.triangle).x).position.z + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).y).position.z + mesh2->vertices.at(mesh1->triangles.at(t1.triangle).z).position.z);
+        c2 = (mesh2->vertices.at(mesh2->triangles.at(t2.triangle).x).position.z + mesh2->vertices.at(mesh2->triangles.at(t2.triangle).y).position.z + mesh2->vertices.at(mesh2->triangles.at(t2.triangle).z).position.z);
         return c1 < c2;
     default:
         return false;
