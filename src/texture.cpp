@@ -10,7 +10,7 @@ glm::vec3 acquireTexel(const Image& image, const glm::vec2& texCoord, const Feat
     // Note, the center of the first pixel is at image coordinates (0.5, 0.5)
 
     const auto xCoord = (int)(texCoord.x * image.width);
-    const auto yCoord = (int)(texCoord.y * image.height);
+    const auto yCoord = (int)((1-texCoord.y) * image.height);
     const auto coord = image.pixels[yCoord * image.width + xCoord];
     
     return coord;
