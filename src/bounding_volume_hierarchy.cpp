@@ -6,6 +6,8 @@
 #include "interpolate.h"
 #include "bounding_volume_hierarchy.h"
 #include <glm/glm.hpp>
+#include <queue>
+#include <iostream>
 
 float max(float f1, float f2) {
     return f1 > f2 ? f1 : f2;
@@ -81,7 +83,7 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     m_numLevels = 1;
     m_numLeaves = 1;
     nodes.push_back(root);
-    subdivide(7, 0);
+    subdivide(20, 0);
 }
 
 
@@ -284,9 +286,99 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // TODO: implement here the bounding volume hierarchy traversal.
         // Please note that you should use `features.enableNormalInterp` and `features.enableTextureMapping`
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
-        return false;
+
+        //nodes 
+        bool hit = false;
+        std::queue<Node> correctNodes;
+        std::queue<Node> tree;
+        std::queue<Node> coloredNodes;
+        Ray ourRay = ray;
+
+        
+        float originalT = ray.t;
+
+        // Traverses all the nodes in the tree and ads the final nodes to a queue
+        if (intersectRayWithShape(nodes.at(0).bounds, ray)) {
+            ray.t = originalT;
+            tree.push(nodes.at(0));
+            
+            while (tree.size() != 0) {
+
+                Node curr = tree.front();
+                tree.pop();
+
+                if (intersectRayWithShape(curr.bounds, ray)) {
+                    if (correctNodes.empty())  
+                         correctNodes.push(nodes.at(0));
+
+                    drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(0.00f, 1.0f, 0.5f), 1.0f);
+                    for (auto n : curr.children) {
+                        tree.push(nodes.at(n));
+                        if (curr.internal) {
+                            correctNodes.push(nodes.at(n));
+                        }
+                    }
+                    ray.t = originalT;
+                } else {
+                    drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(1.00f, 0.5f, 0.0f), 0.3f);
+                    ray.t = originalT;
+                }
+            }
+        }
+        
+
+        float hitT = originalT;
+        Node hitNode;
+       
+
+        Vertex v1;
+        Vertex v2;
+        Vertex v3;
+        Node correctNode;
+
+        //finds the node in which the hit happens
+        while (correctNodes.size() > 0) {
+            Node curr = correctNodes.front();
+            correctNodes.pop();
+            if (!curr.triangles.empty()) {
+                for (auto t : curr.triangles) {
+                    v1 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x);
+                    v2 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y);
+                    v3 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z);
+
+                    if (intersectRayWithTriangle(v1.position, v2.position, v3.position, ray, hitInfo)) {
+                        if (hitT > ray.t) {
+                            hitT = ray.t;
+                            correctNode = curr;
+                            hit = true;
+                        }
+                    } else {
+                        intersectRayWithShape(curr.bounds, ray);
+                        if (hitT >= ray.t) {
+                            coloredNodes.push(curr);
+                            ray.t = originalT;
+                        }
+                    }
+                }
+            }
+        }
+        if (hit) {
+            //intersectRayWithTriangle(tX.position, tY.position, tZ.position, ray, hitInfo)
+            auto t = correctNode.triangles.at(0);
+            v1 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x);
+            v2 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y);
+            v3 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z);
+            drawTriangle(v1, v2, v3);
+            ray.t = originalT;
+            intersectRayWithTriangle(v1.position, v2.position, v3.position, ray, hitInfo);
+        }
+        
+        return hit;
     }
 }
+
+
+
 
 Triangle::Triangle(int mesh, int triangle)
 {
