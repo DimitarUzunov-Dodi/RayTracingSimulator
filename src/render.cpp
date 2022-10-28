@@ -12,7 +12,7 @@
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
-    HitInfo hitInfo;
+    HitInfo hitInfo, hitInfo2;
     if (rayDepth <= MAX_RENDER_DEPTH && bvh.intersect(ray, hitInfo, features)) {
         glm::vec3 Lo = computeLightContribution(scene, bvh, features, ray, hitInfo);
 
@@ -23,12 +23,16 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 
 
             Lo += recursiveCallResult;  
-            if (features.extra.enableTransparency) {
-                Ray transparentRay { ray.origin + ray.direction * ray.t, glm::normalize(ray.direction) };
-                transparentRay.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
-                glm::vec3 transparentColor = getFinalColor(scene, bvh, transparentRay, features, rayDepth + 1);
-                Lo += hitInfo.material.transparency * Lo + (1 - hitInfo.material.transparency) * transparentColor;
-            }
+        }
+
+        if (features.extra.enableTransparency) {
+            Ray transparentRay { ray.origin + ray.direction * ray.t, glm::normalize(ray.direction) };
+            transparentRay.origin += glm::normalize(ray.direction) * std::numeric_limits<float>::epsilon();
+            glm::vec3 transparentColor = glm::vec3(0.0f);
+            if (bvh.intersect(transparentRay, hitInfo2, features))
+                transparentColor = computeLightContribution(scene, bvh, features, transparentRay, hitInfo2);
+
+            Lo = hitInfo.material.transparency * Lo + (1 - hitInfo.material.transparency) * transparentColor;
         }
         // Draw a white debug ray if the ray hits.
         drawRay(ray, Lo);
