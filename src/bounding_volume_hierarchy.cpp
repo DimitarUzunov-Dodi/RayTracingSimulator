@@ -350,6 +350,10 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                         if (hitT > ray.t) {
                             hitT = ray.t;
                             correctNode = curr;
+                            hitInfo.material = m_pScene->meshes.at(t.mesh).material;
+                            hitInfo.normal = glm::normalize(glm::cross(v2.position - v1.position, v3.position - v1.position));
+                            hitInfo.barycentricCoord = computeBarycentricCoord(v1.position, v2.position, v3.position, ray.origin + ray.direction * ray.t);
+                            hitInfo.texCoord = interpolateTexCoord(v1.texCoord, v2.texCoord, v3.texCoord, hitInfo.barycentricCoord);
                             hit = true;
                         }
                     } else {
@@ -370,6 +374,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
             v3 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z);
             drawTriangle(v1, v2, v3);
             ray.t = originalT;
+
             intersectRayWithTriangle(v1.position, v2.position, v3.position, ray, hitInfo);
         }
         
