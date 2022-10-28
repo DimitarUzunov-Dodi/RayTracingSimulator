@@ -82,17 +82,18 @@ bool intersectRayWithShape(const Sphere& sphere, Ray& ray, HitInfo& hitInfo)
     float s1 = (-b - (float)std::sqrt(delta)) / (2 * a),
           s2 = (-b + (float)std::sqrt(delta)) / (2 * a);
 
-    if (s1 >= 0 && s1 < ray.t) {
+    if (s1 >= 0 && s1 < ray.t)
         ray.t = s1;
-        hitInfo.normal = glm::normalize(ray.origin + ray.direction * ray.t - sphere.center);
-        return true;
-    } else if (s2 >= 0 && s2 < ray.t) {
+    else if (s2 >= 0 && s2 < ray.t)
         ray.t = s2;
-        hitInfo.normal = glm::normalize(ray.origin + ray.direction * ray.t - sphere.center);
-        return true;
-    }
+    else
+        return false;
 
-    return false;
+    hitInfo.normal = glm::normalize(ray.origin + ray.direction * ray.t - sphere.center);
+    if (old_ior == sphere.material.ior)
+        hitInfo.material.ior = 1.0f;
+
+    return true;
 }
 
 /// Input: an axis-aligned bounding box with the following parameters: minimum coordinates box.lower and maximum coordinates box.upper

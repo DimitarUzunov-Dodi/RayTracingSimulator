@@ -21,16 +21,21 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             Ray reflection = computeReflectionRay(ray, hitInfo);
             reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
             Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
+
+            if (features.extra.enableTransparency && hitInfo.material.transparency != 1.0f) {
+                Ray refraction = computeRefractedRay(ray, hitInfo);
+                refraction.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
+                Lo += getFinalColor(scene, bvh, refraction, features, rayDepth + 1);
+            }
         }
 
         // Draw a white debug ray if the ray hits.
         drawRay(ray, Lo);
 
         //apply the texture to the textured objects
-        if (features.enableTextureMapping && hitInfo.material.kdTexture) {
+        if (features.enableTextureMapping && hitInfo.material.kdTexture)
+            return acquireTexel(*hitInfo.material.kdTexture, hitInfo.texCoord, features);
 
-            return acquireTexel(*hitInfo.material.kdTexture, hitInfo.texCoord, features);   
-        }
         // Set the color of the pixel to white if the ray hits.
         return Lo;
     } else {

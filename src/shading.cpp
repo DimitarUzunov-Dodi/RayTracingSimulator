@@ -40,3 +40,23 @@ const Ray computeReflectionRay (Ray ray, HitInfo hitInfo)
     };
     return reflectionRay;
 }
+
+const Ray computeRefractedRay(Ray ray, HitInfo hitInfo)
+{
+    glm::vec3 n = glm::normalize(hitInfo.normal);
+    glm::vec3 v = glm::normalize(ray.direction);
+    float n1 = ray.ior;
+    float n2 = hitInfo.material.ior;
+    float cosTheta = glm::dot(v, n);
+
+    if (cosTheta > 0)
+        n *= -1;
+
+    glm::vec3 direction = (n1 / n2) * (v - glm::dot(v, n) * n) - n * (float)glm::sqrt(1 - (glm::pow(n1 / n2, 2) * (1 - glm::pow(glm::dot(v, n), 2))));
+    float offset = 1e-4f;
+    glm::vec3 origin = ray.origin + ray.t * ray.direction - offset * n;
+
+    Ray refractRay = Ray { origin, glm::normalize(direction), std::numeric_limits<float>::max(), n2 };
+
+    return refractRay;
+}
