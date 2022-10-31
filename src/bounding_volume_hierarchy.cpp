@@ -6,7 +6,6 @@
 #include "interpolate.h"
 #include "bounding_volume_hierarchy.h"
 #include <glm/glm.hpp>
-#include <algorithm> 
 
 float max(float f1, float f2) {
     return f1 > f2 ? f1 : f2;
