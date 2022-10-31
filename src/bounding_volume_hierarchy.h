@@ -4,7 +4,7 @@
 #include <framework/ray.h>
 #include <vector>
 
-#define MAX_LEVELS 14
+#define MAX_LEVELS 20
 
 // Forward declaration.
 struct Scene;
