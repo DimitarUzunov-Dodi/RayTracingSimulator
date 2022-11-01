@@ -29,8 +29,10 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             Ray transparentRay { ray.origin + ray.direction * ray.t, glm::normalize(ray.direction) };
             transparentRay.origin += glm::normalize(ray.direction) * std::numeric_limits<float>::epsilon();
             glm::vec3 transparentColor = glm::vec3(0.0f);
-            if (bvh.intersect(transparentRay, hitInfo2, features))
+            if (bvh.intersect(transparentRay, hitInfo2, features)) {
                 transparentColor = computeLightContribution(scene, bvh, features, transparentRay, hitInfo2);
+                drawRay(transparentRay, transparentColor); //VISUAL DEBUG
+            }
 
             Lo = hitInfo.material.transparency * Lo + (1 - hitInfo.material.transparency) * transparentColor;
         }
