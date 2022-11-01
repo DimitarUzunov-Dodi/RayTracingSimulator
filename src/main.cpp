@@ -37,7 +37,7 @@ enum class ViewMode {
 
 int debugBVHLeafId = 0;
 float thresholdForBloomEffect = 0.0;
-
+int boxSizeValue = 3;
 static void setOpenGLMatrices(const Trackball& camera);
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
 static void drawSceneOpenGL(const Scene& scene);
@@ -153,6 +153,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Transparency", &config.features.extra.enableTransparency);
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);
                 ImGui::DragFloat("Threshold for bloom effect", &thresholdForBloomEffect, 0.01f, 0.0f, 1.0f);
+                ImGui::SliderInt("Box size for bloom effect", &boxSizeValue, 1, 30);
             }
             ImGui::Separator();
 
@@ -183,7 +184,7 @@ int main(int argc, char** argv)
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
                     std::cout << "threshold" << thresholdForBloomEffect << std::endl;
-                    renderRayTracing(scene, camera, bvh, screen, config.features, thresholdForBloomEffect);
+                    renderRayTracing(scene, camera, bvh, screen, config.features, thresholdForBloomEffect, boxSizeValue);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.

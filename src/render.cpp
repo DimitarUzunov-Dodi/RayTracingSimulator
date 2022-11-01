@@ -35,7 +35,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect)
+void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect)
 {
     std::cout << "bloom threshold " << thresholdForBloomEffect << "\n";
     glm::ivec2 windowResolution = screen.resolution();
@@ -61,7 +61,7 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
 
     if (features.extra.enableBloomEffect) {
         auto threshold = getThresholdedImage(toBeProcessed, thresholdForBloomEffect); // Threshold filter
-        boxFiltered = boxFilter(threshold); // Box filter (average) for the thresholded image
+        boxFiltered = boxFilter(threshold, boxSizeBloomEffect); // Box filter (average) for the thresholded image
     }
     //Output colors to actual window
     for (int y = 0; y < windowResolution.y; y++) {
