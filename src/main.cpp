@@ -36,6 +36,7 @@ enum class ViewMode {
 };
 
 int debugBVHLeafId = 0;
+int raysPerPixel = 1;
 
 static void setOpenGLMatrices(const Trackball& camera);
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
@@ -151,6 +152,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Glossy reflections", &config.features.extra.enableGlossyReflection);
                 ImGui::Checkbox("Transparency", &config.features.extra.enableTransparency);
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);
+                ImGui::Checkbox("Multiple Rays per pixe", &config.features.extra.enableMultipleRaysPerPixel);
             }
             ImGui::Separator();
 
@@ -180,7 +182,7 @@ int main(int argc, char** argv)
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, config.features);
+                    renderRayTracing(scene, camera, bvh, screen, config.features, raysPerPixel);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -191,6 +193,7 @@ int main(int argc, char** argv)
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Text("Debugging");
+            ImGui::SliderInt("Number of rays per pixel", &raysPerPixel, 1, 30);
             if (viewMode == ViewMode::Rasterization) {
                 ImGui::Checkbox("Draw BVH Level", &debugBVHLevel);
                 if (debugBVHLevel)

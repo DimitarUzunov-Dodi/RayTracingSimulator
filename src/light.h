@@ -14,3 +14,5 @@ float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& deb
 
 glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo);
 
+double getRandomNumInRange(const double &start, const double &end);
+
