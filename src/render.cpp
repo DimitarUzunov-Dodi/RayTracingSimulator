@@ -4,11 +4,13 @@
 #include "screen.h"
 #include "texture.h"
 #include <framework/trackball.h>
+#include "glossy.h"
 #ifdef NDEBUG
 #include <omp.h>
 #endif
 
-#define MAX_RENDER_DEPTH 50 
+
+#define MAX_RENDER_DEPTH 3 
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
@@ -17,9 +19,13 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 
         glm::vec3 Lo = computeLightContribution(scene, bvh, features, ray, hitInfo);
 
-        if (features.enableRecursive) {
+        if (features.enableRecursive && hitInfo.material.ks != glm::vec3 {0})
+    {
             Ray reflection = computeReflectionRay(ray, hitInfo);
             reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
+            if (features.extra.enableGlossyReflection) {
+                reflection = computeGlossyRay(reflection, hitInfo, features);
+            }
             Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
         }
 
