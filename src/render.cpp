@@ -43,11 +43,6 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-float getRandomOffset(float pos) {
-    return (-0.5f + ((float)rand() / RAND_MAX))
-        / (2000.0f * pos);
-}
-
 void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
@@ -71,8 +66,8 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 std::vector<float> rX, rY;
                 srand(time(nullptr));
                 for (int i = 0; i < raysPerPixel; i++) {
-                    rX.push_back(getRandomOffset(windowResolution.x));
-                    rY.push_back(getRandomOffset(windowResolution.y));
+                    rX.push_back(getRandomNumInRange(0.0f, 1.0f / (float)windowResolution.x * 2.0f));
+                    rY.push_back(getRandomNumInRange(0.0f, 1.0f / (float)windowResolution.y * 2.0f));
                 }
 
                 std::shuffle(rY.begin(), rY.end(), std::default_random_engine {});
