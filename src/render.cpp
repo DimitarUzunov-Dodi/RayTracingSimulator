@@ -9,7 +9,7 @@
 #include <omp.h>
 #endif
 
-
+#define GLOSSY_RAYS 12
 #define MAX_RENDER_DEPTH 3 
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
@@ -23,10 +23,19 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     {
             Ray reflection = computeReflectionRay(ray, hitInfo);
             reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
+
             if (features.extra.enableGlossyReflection) {
-                reflection = computeGlossyRay(reflection, hitInfo, features);
+                Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1) / (float) (GLOSSY_RAYS+1);
+                for (int i = 0; i < GLOSSY_RAYS; i++) {
+                    
+                    Ray perturbedRay = computePerturbedRay(reflection, hitInfo, features);
+                    glm::vec3 color = getFinalColor(scene, bvh, perturbedRay, features, rayDepth + 1);
+                    drawRay(perturbedRay, color);
+                    Lo += color / (float)(GLOSSY_RAYS + 1);
+                }
+            } else {
+                Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
             }
-            Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
         }
 
         // Draw a white debug ray if the ray hits.

@@ -5,8 +5,8 @@
 #include <glm/glm.hpp>
 #include <queue>
 
-#define GLOSSY_RAY_AVG 50
-#define SHININES_FACTOR 30.0f
+
+#define SHININES_FACTOR 50.0f
 
 
 // Computes a random ray in the square around our reflect Ray.
@@ -50,14 +50,3 @@ const Ray computePerturbedRay(Ray ray, HitInfo hitInfo, const Features& features
 
 }
 
-const Ray computeGlossyRay(Ray ray, HitInfo hitInfo, const Features& features)
-{
-    glm::vec3 sumDirections = ray.direction;
-    for (int i = 0; i < GLOSSY_RAY_AVG; i++) {
-        sumDirections += computePerturbedRay(ray, hitInfo, features).direction;
-    }
-
-    glm::vec3 avgDir = sumDirections / float(GLOSSY_RAY_AVG+1);
-    
-    return Ray { ray.origin, avgDir };
-}
