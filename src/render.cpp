@@ -4,7 +4,6 @@
 #include "screen.h"
 #include "texture.h"
 #include <framework/trackball.h>
-#include "glossy.h"
 #include <iostream>
 #include <vector>
 #include <random>
@@ -12,6 +11,7 @@
 #include <omp.h>
 #endif
 #include <filter.h>
+#include <glossy.h>
 
 #define GLOSSY_RAYS 12
 #define MAX_RENDER_DEPTH 3 
