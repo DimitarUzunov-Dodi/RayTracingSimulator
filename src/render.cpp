@@ -2,7 +2,6 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
-#include "filter.h"
 #include "texture.h"
 #include <framework/trackball.h>
 #include <iostream>
@@ -11,6 +10,7 @@
 #ifdef NDEBUG
 #include <omp.h>
 #endif
+#include <filter.h>
 
 #define MAX_RENDER_DEPTH 5 
 
@@ -63,7 +63,8 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 }
 
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
+void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, 
+    const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
     std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
@@ -73,10 +74,9 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
     }
 
     // Enable multi threading in Release mode
-    /*
 #ifdef NDEBUG
 #pragma omp parallel for schedule(guided)
-#endif */
+#endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
             // NOTE: (-1, -1) at the bottom left of the screen, (+1, +1) at the top right of the screen.
@@ -107,7 +107,7 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 }
                 RaysCount += (float)raysPerPixel;
             }
-            toBeProcessed[y][x] = finalColor/RaysCount
+            toBeProcessed[y][x] = finalColor / RaysCount;
         }
     }
 
