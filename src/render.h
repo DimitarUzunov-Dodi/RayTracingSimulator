@@ -17,4 +17,4 @@ struct Features;
 void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
 
 // Get the color of a ray.
-glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth = 0);
+glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray& ray, const Features& features, int rayDepth = 0);

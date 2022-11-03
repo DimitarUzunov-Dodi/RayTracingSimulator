@@ -6,6 +6,7 @@ DISABLE_WARNINGS_PUSH()
 DISABLE_WARNINGS_POP()
 #include <filesystem>
 #include <vector>
+#include <framework/trackball.h>
 
 class Screen {
 public:
@@ -13,7 +14,11 @@ public:
 
     void clear(const glm::vec3& color);
     void setPixel(int x, int y, const glm::vec3& color);
-
+    void setPreviousCameraMatrix(const Trackball& camera);
+    void setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, bool hit);
+    void initVelocityBuffer(int size);
+    glm::vec3 getPixelVelocity(int x, int y);
+    void motionBlur(int sampleCount);
     void writeBitmapToFile(const std::filesystem::path& filePath);
     void draw();
 
@@ -25,9 +30,17 @@ public:
     [[nodiscard]] const std::vector<glm::vec3>& pixels() const;
     [[nodiscard]] std::vector<glm::vec3>& pixels();
 
+    
+    bool firstRender = true;
+
 private:
     bool m_presentable;
     glm::ivec2 m_resolution;
     std::vector<glm::vec3> m_textureData;
     uint32_t m_texture;
+
+    // Added by Filip
+    glm::mat4 m_previousViewMatrix;
+    glm::mat4 m_previousProjectionMatrix;
+    std::vector<glm::vec2> m_velocityBuffer;
 };
