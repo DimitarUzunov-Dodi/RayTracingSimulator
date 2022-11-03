@@ -37,17 +37,18 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 
 void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect)
 {
-    std::cout << "bloom threshold " << thresholdForBloomEffect << "\n";
     glm::ivec2 windowResolution = screen.resolution();
+    std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
+    for (int i = 0; i < windowResolution.y; i++) {
+        toBeProcessed[i] = std::vector<glm::vec3>(windowResolution.x);
+        boxFiltered[i] = std::vector<glm::vec3>(windowResolution.x);
+    }
+
     // Enable multi threading in Release mode
-    /*
 #ifdef NDEBUG
 #pragma omp parallel for schedule(guided)
-#endif */
-    std::vector<std::vector<glm::vec3>> toBeProcessed, boxFiltered;
-
+#endif
     for (int y = 0; y < windowResolution.y; y++) {
-        toBeProcessed.push_back(std::vector<glm::vec3> {});
         for (int x = 0; x != windowResolution.x; x++) {
             // NOTE: (-1, -1) at the bottom left of the screen, (+1, +1) at the top right of the screen.
             const glm::vec2 normalizedPixelPos {
@@ -55,7 +56,7 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
-            toBeProcessed[y].push_back(getFinalColor(scene, bvh, cameraRay, features));
+            toBeProcessed[y][x] = getFinalColor(scene, bvh, cameraRay, features);
         }
     }
 
@@ -63,6 +64,7 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
         auto threshold = getThresholdedImage(toBeProcessed, thresholdForBloomEffect); // Threshold filter
         boxFiltered = boxFilter(threshold, boxSizeBloomEffect); // Box filter (average) for the thresholded image
     }
+
     //Output colors to actual window
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
