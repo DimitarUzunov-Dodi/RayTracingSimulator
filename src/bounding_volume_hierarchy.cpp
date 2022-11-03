@@ -291,7 +291,9 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                       
                 }
             }
-            
+            if (features.enableNormalInterp && hit == true) {
+                hitInfo.normal = normal.direction;
+            }
         }
         
         if (features.enableNormalInterp && hit == true) {
@@ -301,9 +303,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
             drawRay(normalC, glm::vec3(0.0f, 0.0f, 1.0f));
             drawRay(normal, glm::vec3(0.0f, 0.5f, 1.0f));
 
-        } else if (hit == true) {
-            drawRay(norm, glm::vec3(0.0f, 0.5f, 1.0f));
-        }
+        } 
         // Intersect with spheres.
         for (const auto& sphere : m_pScene->spheres)
             hit |= intersectRayWithShape(sphere, ray, hitInfo);
