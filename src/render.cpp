@@ -23,7 +23,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
         glm::vec3 Lo = computeLightContribution(scene, bvh, features, ray, hitInfo);
 
         if (features.enableRecursive && hitInfo.material.ks != glm::vec3 {0})
-    {
+        {
             Ray reflection = computeReflectionRay(ray, hitInfo);
             reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
 
@@ -47,10 +47,10 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 
             if (features.enableRecursive) {
                 transparentColor = getFinalColor(scene, bvh, transparentRay, features, rayDepth + 1);
-                drawRay(transparentRay, transparentColor); // VISUAL DEBUG
+                drawRay(transparentRay, glm::vec3(0.0f, 1.0f, 0.0f)); // VISUAL DEBUG
             } else if (bvh.intersect(transparentRay, hitInfo2, features)) {
                 transparentColor = computeLightContribution(scene, bvh, features, transparentRay, hitInfo2);
-                drawRay(transparentRay, transparentColor); // VISUAL DEBUG
+                drawRay(transparentRay, glm::vec3(0.0f, 1.0f, 0.0f)); // VISUAL DEBUG
             }
 
             Lo = hitInfo.material.transparency * Lo + (1 - hitInfo.material.transparency) * transparentColor;
