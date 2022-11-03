@@ -28,7 +28,7 @@ add_library(FinalProjectLib
 	"src/shading.cpp"
 	"src/interpolate.cpp"
 	"src/render.cpp"
-)
+ "src/filter.cpp")
 
 if (REFERENCE_MODE)
 	target_sources(FinalProjectLib PRIVATE

@@ -37,6 +37,8 @@ enum class ViewMode {
 
 int debugBVHLeafId = 0;
 int raysPerPixel = 1;
+float thresholdForBloomEffect = 0.0;
+int boxSizeValue = 3;
 
 static void setOpenGLMatrices(const Trackball& camera);
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
@@ -152,7 +154,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Glossy reflections", &config.features.extra.enableGlossyReflection);
                 ImGui::Checkbox("Transparency", &config.features.extra.enableTransparency);
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);
-                ImGui::Checkbox("Multiple Rays per pixe", &config.features.extra.enableMultipleRaysPerPixel);
+                ImGui::Checkbox("Multiple Rays per pixel", &config.features.extra.enableMultipleRaysPerPixel);
             }
             ImGui::Separator();
 
@@ -182,7 +184,7 @@ int main(int argc, char** argv)
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, config.features, raysPerPixel);
+                    renderRayTracing(scene, camera, bvh, screen, config.features, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -194,6 +196,8 @@ int main(int argc, char** argv)
             ImGui::Separator();
             ImGui::Text("Debugging");
             ImGui::SliderInt("Number of rays per pixel", &raysPerPixel, 1, 30);
+            ImGui::DragFloat("Threshold for bloom effect", &thresholdForBloomEffect, 0.01f, 0.0f, 1.0f);
+            ImGui::SliderInt("Box size for bloom effect", &boxSizeValue, 1, 30);
             if (viewMode == ViewMode::Rasterization) {
                 ImGui::Checkbox("Draw BVH Level", &debugBVHLevel);
                 if (debugBVHLevel)
@@ -355,7 +359,7 @@ int main(int argc, char** argv)
             } break;
             case ViewMode::RayTracing: {
                 screen.clear(glm::vec3(0.0f));
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
                 screen.setPixel(0, 0, glm::vec3(1.0f));
                 screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
             } break;
@@ -408,7 +412,7 @@ int main(int argc, char** argv)
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
                 const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
