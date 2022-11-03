@@ -136,6 +136,7 @@ int main(int argc, char** argv)
             ImGui::Separator();
             if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Checkbox("Shading", &config.features.enableShading);
+                ImGui::Checkbox("Sample area lights", &config.features.enableAreaLightSampling);
                 ImGui::Checkbox("Recursive(reflections)", &config.features.enableRecursive);
                 ImGui::Checkbox("Hard shadows", &config.features.enableHardShadow);
                 ImGui::Checkbox("Soft shadows", &config.features.enableSoftShadow);

@@ -6,6 +6,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/geometric.hpp>
 DISABLE_WARNINGS_POP()
 #include <cmath>
+#include <iostream>
 #include <random>
 
 std::default_random_engine defEngine;
@@ -101,6 +102,7 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
         + (area(position, pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02)
               + area(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, pointB + parallelogramLight.edge01, pointA + parallelogramLight.edge02)
           ) / parallelogramArea * parallelogramLight.color3;
+
 }
 
 // test the visibility at a given light sample
@@ -162,6 +164,8 @@ float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& deb
 //
 // You can add the light sources programmatically by creating a custom scene (modify the Custom case in the
 // loadScene function in scene.cpp). Custom lights will not be visible in rasterization view.
+
+#define NUM_OF_SAMPLES 100
 glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
     if (features.enableShading) {
@@ -178,16 +182,38 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
              } else if (std::holds_alternative<SegmentLight>(light)) {
 
                  const SegmentLight segmentLight = std::get<SegmentLight>(light);
-                 lightContribution = 0.5f * computeShading(segmentLight.endpoint0, segmentLight.color0, features, ray, hitInfo) +
-                 0.5f * computeShading(segmentLight.endpoint1, segmentLight.color1, features, ray, hitInfo);
+                 if (!features.enableAreaLightSampling) {
+                     lightContribution = 0.5f * computeShading(segmentLight.endpoint0, segmentLight.color0, features, ray, hitInfo) 
+                         + 0.5f * computeShading(segmentLight.endpoint1, segmentLight.color1, features, ray, hitInfo);
+                 } else {
+                     lightContribution = glm::vec3(0.0f);
+                     for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+                         glm::vec3 sampledPosition, sampledColor;
+                         sampleSegmentLight(segmentLight, sampledPosition, sampledColor);
+                         
+                         lightContribution += computeShading(sampledPosition, sampledColor, features, ray, hitInfo);
+                     }
 
+                     lightContribution /= (float)NUM_OF_SAMPLES;
+                 }
              } else if (std::holds_alternative<ParallelogramLight>(light)) {
-
                  const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
-                 lightContribution = 0.25f * computeShading(parallelogramLight.v0, parallelogramLight.color0, features, ray, hitInfo) +
-                 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.color1, features, ray, hitInfo) +
-                 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge02, parallelogramLight.color2, features, ray, hitInfo) +
-                 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, parallelogramLight.color0, features, ray, hitInfo);
+                 if (!features.enableAreaLightSampling) {
+                     lightContribution = 0.25f * computeShading(parallelogramLight.v0, parallelogramLight.color0, features, ray, hitInfo) 
+                         + 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01, parallelogramLight.color1, features, ray, hitInfo) 
+                         + 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge02, parallelogramLight.color2, features, ray, hitInfo) 
+                         + 0.25f * computeShading(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, parallelogramLight.color0, features, ray, hitInfo);
+                 } else {
+                     lightContribution = glm::vec3(0.0f);
+                     for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+                         glm::vec3 sampledPosition, sampledColor;
+                         sampleParallelogramLight(parallelogramLight, sampledPosition, sampledColor);
+
+                         lightContribution += computeShading(sampledPosition, sampledColor, features, ray, hitInfo);
+                     }
+
+                     lightContribution /= (float)NUM_OF_SAMPLES;
+                 }
              }
              result += lightContribution;
              
