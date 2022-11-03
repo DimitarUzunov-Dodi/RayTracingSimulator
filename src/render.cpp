@@ -8,7 +8,7 @@
 #include <omp.h>
 #endif
 
-#define MAX_RENDER_DEPTH 50 
+#define MAX_RENDER_DEPTH 5 
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
@@ -29,9 +29,13 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             Ray transparentRay { ray.origin + ray.direction * ray.t, glm::normalize(ray.direction) };
             transparentRay.origin += glm::normalize(ray.direction) * std::numeric_limits<float>::epsilon();
             glm::vec3 transparentColor = glm::vec3(0.0f);
-            if (bvh.intersect(transparentRay, hitInfo2, features)) {
+
+            if (features.enableRecursive) {
+                transparentColor = getFinalColor(scene, bvh, transparentRay, features, rayDepth + 1);
+                drawRay(transparentRay, transparentColor); // VISUAL DEBUG
+            } else if (bvh.intersect(transparentRay, hitInfo2, features)) {
                 transparentColor = computeLightContribution(scene, bvh, features, transparentRay, hitInfo2);
-                drawRay(transparentRay, transparentColor); //VISUAL DEBUG
+                drawRay(transparentRay, transparentColor); // VISUAL DEBUG
             }
 
             Lo = hitInfo.material.transparency * Lo + (1 - hitInfo.material.transparency) * transparentColor;
