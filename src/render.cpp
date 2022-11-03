@@ -6,13 +6,15 @@
 #include <framework/trackball.h>
 #include <iostream>
 #include <vector>
-#include<random>
+#include <random>
 #ifdef NDEBUG
 #include <omp.h>
 #endif
 #include <filter.h>
+#include <glossy.h>
 
-#define MAX_RENDER_DEPTH 5 
+#define GLOSSY_RAYS 12
+#define MAX_RENDER_DEPTH 3 
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
@@ -20,13 +22,22 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     if (rayDepth <= MAX_RENDER_DEPTH && bvh.intersect(ray, hitInfo, features)) {
         glm::vec3 Lo = computeLightContribution(scene, bvh, features, ray, hitInfo);
 
-        if (features.enableRecursive) {
+        if (features.enableRecursive && hitInfo.material.ks != glm::vec3 {0})
+    {
             Ray reflection = computeReflectionRay(ray, hitInfo);
             reflection.origin += hitInfo.normal * std::numeric_limits<float>::epsilon();
-            glm::vec3 recursiveCallResult = getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
 
-
-            Lo += recursiveCallResult;  
+            if (features.extra.enableGlossyReflection) {
+                Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1) / (float) (GLOSSY_RAYS+1);
+                for (int i = 0; i < GLOSSY_RAYS; i++) {
+                    Ray perturbedRay = computePerturbedRay(reflection, hitInfo, features);
+                    glm::vec3 color = getFinalColor(scene, bvh, perturbedRay, features, rayDepth + 1);
+                    drawRay(perturbedRay, color);
+                    Lo += color / (float)(GLOSSY_RAYS + 1);
+                }
+            } else {
+                Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
+            }
         }
 
         if (features.extra.enableTransparency) {
