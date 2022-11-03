@@ -5,18 +5,21 @@
 #include "texture.h"
 #include <framework/trackball.h>
 #include "glossy.h"
+#include <iostream>
+#include <vector>
+#include <random>
 #ifdef NDEBUG
 #include <omp.h>
 #endif
+#include <filter.h>
 
 #define GLOSSY_RAYS 12
 #define MAX_RENDER_DEPTH 3 
 
 glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
 {
-    HitInfo hitInfo;
+    HitInfo hitInfo, hitInfo2;
     if (rayDepth <= MAX_RENDER_DEPTH && bvh.intersect(ray, hitInfo, features)) {
-
         glm::vec3 Lo = computeLightContribution(scene, bvh, features, ray, hitInfo);
 
         if (features.enableRecursive && hitInfo.material.ks != glm::vec3 {0})
@@ -27,7 +30,6 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             if (features.extra.enableGlossyReflection) {
                 Lo += getFinalColor(scene, bvh, reflection, features, rayDepth + 1) / (float) (GLOSSY_RAYS+1);
                 for (int i = 0; i < GLOSSY_RAYS; i++) {
-                    
                     Ray perturbedRay = computePerturbedRay(reflection, hitInfo, features);
                     glm::vec3 color = getFinalColor(scene, bvh, perturbedRay, features, rayDepth + 1);
                     drawRay(perturbedRay, color);
@@ -38,6 +40,21 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             }
         }
 
+        if (features.extra.enableTransparency) {
+            Ray transparentRay { ray.origin + ray.direction * ray.t, glm::normalize(ray.direction) };
+            transparentRay.origin += glm::normalize(ray.direction) * std::numeric_limits<float>::epsilon();
+            glm::vec3 transparentColor = glm::vec3(0.0f);
+
+            if (features.enableRecursive) {
+                transparentColor = getFinalColor(scene, bvh, transparentRay, features, rayDepth + 1);
+                drawRay(transparentRay, transparentColor); // VISUAL DEBUG
+            } else if (bvh.intersect(transparentRay, hitInfo2, features)) {
+                transparentColor = computeLightContribution(scene, bvh, features, transparentRay, hitInfo2);
+                drawRay(transparentRay, transparentColor); // VISUAL DEBUG
+            }
+
+            Lo = hitInfo.material.transparency * Lo + (1 - hitInfo.material.transparency) * transparentColor;
+        }
         // Draw a white debug ray if the ray hits.
         drawRay(ray, Lo);
 
@@ -56,9 +73,17 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features)
+
+void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, 
+    const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
+    std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
+    for (int i = 0; i < windowResolution.y; i++) {
+        toBeProcessed[i] = std::vector<glm::vec3>(windowResolution.x);
+        boxFiltered[i] = std::vector<glm::vec3>(windowResolution.x);
+    }
+
     // Enable multi threading in Release mode
 #ifdef NDEBUG
 #pragma omp parallel for schedule(guided)
@@ -71,7 +96,44 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
-            screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay, features));
+            glm::vec3 finalColor = getFinalColor(scene, bvh, cameraRay, features);
+            float RaysCount = 1.00f;
+
+            if (features.extra.enableMultipleRaysPerPixel) {
+                std::vector<float> rX, rY;
+                srand(time(nullptr));
+                for (int i = 0; i < raysPerPixel; i++) {
+                    rX.push_back(getRandomNumInRange(0.0f, 1.0f / (float)windowResolution.x * 2.0f));
+                    rY.push_back(getRandomNumInRange(0.0f, 1.0f / (float)windowResolution.y * 2.0f));
+                }
+
+                std::shuffle(rY.begin(), rY.end(), std::default_random_engine {});
+
+                for (int i=0; i<raysPerPixel; i++) {
+                    const glm::vec2 normalizedPixelPos2 {
+                        glm::clamp(normalizedPixelPos.x + rX[i], -1.0f, 1.0f),
+                        glm::clamp(normalizedPixelPos.y + rY[i], -1.0f, 1.0f)
+                    };
+                    finalColor += getFinalColor(scene, bvh, camera.generateRay(normalizedPixelPos2), features);
+                }
+                RaysCount += (float)raysPerPixel;
+            }
+            toBeProcessed[y][x] = finalColor / RaysCount;
+        }
+    }
+
+    if (features.extra.enableBloomEffect) {
+        auto threshold = getThresholdedImage(toBeProcessed, thresholdForBloomEffect); // Threshold filter
+        boxFiltered = boxFilter(threshold, boxSizeBloomEffect); // Box filter (average) for the thresholded image
+    }
+
+    //Output colors to actual window
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            if (!features.extra.enableBloomEffect)
+                screen.setPixel(x, y, toBeProcessed[y][x]);
+            else
+                screen.setPixel(x, y, toBeProcessed[y][x] + boxFiltered[y][x]);
         }
     }
 }

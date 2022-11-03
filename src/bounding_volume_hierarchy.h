@@ -4,13 +4,35 @@
 #include <framework/ray.h>
 #include <vector>
 
+#define MAX_LEVELS 20
+
 // Forward declaration.
 struct Scene;
+
+class TriangleOrChild {
+public:
+    int meshOrChild;
+    int triangle;
+    TriangleOrChild(int meshOrChild, int triangle);
+};
+
+class Node {
+public:
+    Node();
+    bool internal = false;
+    int level = 0;
+    std::vector<TriangleOrChild> trianglesOrChildren;
+    AxisAlignedBox bounds;
+};
 
 class BoundingVolumeHierarchy {
 public:
     // Constructor. Receives the scene and builds the bounding volume hierarchy.
     BoundingVolumeHierarchy(Scene* pScene);
+
+    void subdivide(int limit, int node);
+
+    static void quickSortStepByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene);
 
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
@@ -34,4 +56,5 @@ private:
     int m_numLevels;
     int m_numLeaves;
     Scene* m_pScene;
+    std::vector<Node> nodes;
 };

@@ -9,7 +9,7 @@ DISABLE_WARNINGS_POP()
 #include <random>
 
 //Provides random double number in range (start,end) with uniform distribution
-double getRandomNumInRange(double start, double end)
+double getRandomNumInRange(const double &start, const double &end)
 {
     std::default_random_engine defEngine;
     std::uniform_real_distribution<double> dDistro(start, end);
