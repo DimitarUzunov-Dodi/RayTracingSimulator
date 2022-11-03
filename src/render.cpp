@@ -2,8 +2,11 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
+#include "filter.h"
 #include "texture.h"
 #include <framework/trackball.h>
+#include <iostream>
+#include <vector>
 #ifdef NDEBUG
 #include <omp.h>
 #endif
@@ -58,9 +61,15 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features)
+void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect)
 {
     glm::ivec2 windowResolution = screen.resolution();
+    std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
+    for (int i = 0; i < windowResolution.y; i++) {
+        toBeProcessed[i] = std::vector<glm::vec3>(windowResolution.x);
+        boxFiltered[i] = std::vector<glm::vec3>(windowResolution.x);
+    }
+
     // Enable multi threading in Release mode
 #ifdef NDEBUG
 #pragma omp parallel for schedule(guided)
@@ -73,7 +82,22 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
-            screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay, features));
+            toBeProcessed[y][x] = getFinalColor(scene, bvh, cameraRay, features);
+        }
+    }
+
+    if (features.extra.enableBloomEffect) {
+        auto threshold = getThresholdedImage(toBeProcessed, thresholdForBloomEffect); // Threshold filter
+        boxFiltered = boxFilter(threshold, boxSizeBloomEffect); // Box filter (average) for the thresholded image
+    }
+
+    //Output colors to actual window
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            if (!features.extra.enableBloomEffect)
+                screen.setPixel(x, y, toBeProcessed[y][x]);
+            else
+                screen.setPixel(x, y, toBeProcessed[y][x] + boxFiltered[y][x]);
         }
     }
 }
