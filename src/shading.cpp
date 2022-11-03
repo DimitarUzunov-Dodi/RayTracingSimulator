@@ -34,7 +34,9 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
 const Ray computeReflectionRay (Ray ray, HitInfo hitInfo)
 {
     // Do NOT use glm::reflect!! write your own code.
-    Ray reflectionRay {};
-    // TODO: implement the reflection ray computation.
+    Ray reflectionRay { 
+        ray.origin + ray.direction * ray.t,
+        glm::normalize(ray.direction - 2.0f * glm::dot(ray.direction, hitInfo.normal) * hitInfo.normal)
+    };
     return reflectionRay;
 }
