@@ -4,7 +4,7 @@
 #include <framework/ray.h>
 #include <vector>
 
-#define MAX_LEVELS 14
+#define MAX_LEVELS 20
 
 // Forward declaration.
 struct Scene;
@@ -32,7 +32,7 @@ public:
 
     void subdivide(int limit, int node);
 
-    static void sortByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene);
+    static void quickSortStepByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene);
 
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
