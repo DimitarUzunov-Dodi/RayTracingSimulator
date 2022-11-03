@@ -2,14 +2,15 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
-#include "filter.h"
 #include "texture.h"
 #include <framework/trackball.h>
 #include <iostream>
 #include <vector>
+#include<random>
 #ifdef NDEBUG
 #include <omp.h>
 #endif
+#include <filter.h>
 
 #define MAX_RENDER_DEPTH 5 
 
@@ -61,7 +62,9 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect)
+
+void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, 
+    const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
     std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
@@ -82,7 +85,29 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
-            toBeProcessed[y][x] = getFinalColor(scene, bvh, cameraRay, features);
+            glm::vec3 finalColor = getFinalColor(scene, bvh, cameraRay, features);
+            float RaysCount = 1.00f;
+
+            if (features.extra.enableMultipleRaysPerPixel) {
+                std::vector<float> rX, rY;
+                srand(time(nullptr));
+                for (int i = 0; i < raysPerPixel; i++) {
+                    rX.push_back(getRandomNumInRange(0.0f, 1.0f / (float)windowResolution.x * 2.0f));
+                    rY.push_back(getRandomNumInRange(0.0f, 1.0f / (float)windowResolution.y * 2.0f));
+                }
+
+                std::shuffle(rY.begin(), rY.end(), std::default_random_engine {});
+
+                for (int i=0; i<raysPerPixel; i++) {
+                    const glm::vec2 normalizedPixelPos2 {
+                        glm::clamp(normalizedPixelPos.x + rX[i], -1.0f, 1.0f),
+                        glm::clamp(normalizedPixelPos.y + rY[i], -1.0f, 1.0f)
+                    };
+                    finalColor += getFinalColor(scene, bvh, camera.generateRay(normalizedPixelPos2), features);
+                }
+                RaysCount += (float)raysPerPixel;
+            }
+            toBeProcessed[y][x] = finalColor / RaysCount;
         }
     }
 
