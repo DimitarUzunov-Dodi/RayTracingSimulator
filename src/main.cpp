@@ -247,6 +247,12 @@ int main(int argc, char** argv)
                                 ImGui::DragFloat3("Endpoint 1", glm::value_ptr(light.endpoint1), 0.01f, -3.0f, 3.0f);
                                 ImGui::ColorEdit3("Color 0", glm::value_ptr(light.color0));
                                 ImGui::ColorEdit3("Color 1", glm::value_ptr(light.color1));
+                                if (ImGui::Button("Get sample from this light")) {
+                                    glm::vec3 sampledPosition, sampledColor;
+                                    sampleSegmentLight(light, sampledPosition, sampledColor);
+                                    std::cout << "position: (" << sampledPosition.x << " " << sampledPosition.y << " " << sampledPosition.z << ")" << std::endl
+                                              << "color: (" << sampledColor.x << " " << sampledColor.y << " " << sampledColor.z << ")" << std::endl;
+                                }
                             },
                             [&](ParallelogramLight& light) {
                                 glm::vec3 vertex1 = light.v0 + light.edge01;
@@ -273,6 +279,12 @@ int main(int argc, char** argv)
                                 ImGui::ColorEdit3("Color 1", glm::value_ptr(light.color1));
                                 ImGui::ColorEdit3("Color 2", glm::value_ptr(light.color2));
                                 ImGui::ColorEdit3("Color 3", glm::value_ptr(light.color3));
+                                if (ImGui::Button("Get sample")) {
+                                    glm::vec3 sampledPosition2, sampledColor2;
+                                    sampleParallelogramLight(light, sampledPosition2, sampledColor2);
+                                    std::cout << "position: (" << sampledPosition2.x << " " << sampledPosition2.y << " " << sampledPosition2.z << ")" << std::endl
+                                              << "color: (" << sampledColor2.x << " " << sampledColor2.y << " " << sampledColor2.z << ")" << std::endl;
+                                }
                             },
                             [](auto) { /* any other type of light */ }),
                         scene.lights[size_t(selectedLightIdx)]);

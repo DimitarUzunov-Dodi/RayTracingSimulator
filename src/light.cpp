@@ -8,10 +8,10 @@ DISABLE_WARNINGS_POP()
 #include <cmath>
 #include <random>
 
+std::default_random_engine defEngine;
 //Provides random double number in range (start,end) with uniform distribution
 double getRandomNumInRange(const double &start, const double &end)
 {
-    std::default_random_engine defEngine;
     std::uniform_real_distribution<double> dDistro(start, end);
     return dDistro(defEngine);
 }
@@ -32,11 +32,34 @@ glm::vec3 getRandomPoint(const glm::vec3& start, const glm::vec3& end) {
     return glm::vec3(getRandomNumInRange(start.x, end.x), getRandomNumInRange(start.y, end.y), getRandomNumInRange(start.z, end.z));
 }
 
+//Provides t for which normalized * t = finalVec
+float getMaxTVal(glm::vec3 finalVec, glm::vec3 normalized) {
+    float maxT = 0.0;
+
+    if (normalized.x) {
+        maxT = glm::max(maxT, (finalVec.x / normalized.x));
+    }
+
+    if (normalized.y) {
+        maxT = glm::max(maxT, (finalVec.y / normalized.y)); 
+    }
+
+    if (normalized.z) {
+        maxT = glm::max(maxT, (finalVec.z / normalized.z));
+    }
+
+    return maxT;
+}
+
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
 void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, glm::vec3& color)
 {
-    position = getRandomPoint(segmentLight.endpoint0, segmentLight.endpoint1);
+    glm::vec3 direction = glm::normalize(segmentLight.endpoint1 - segmentLight.endpoint0);
+    float maxT = getMaxTVal(segmentLight.endpoint1 - segmentLight.endpoint0, direction);
+    float t = getRandomNumInRange(0.0f, maxT);
+
+    position = segmentLight.endpoint0 + t * direction;
     glm::vec3 avgV = ((position - segmentLight.endpoint0) / (segmentLight.endpoint1 - segmentLight.endpoint0));
     double percentage = avg(avg(avgV.x, avgV.y), avgV.z);
     color = (float)(1.0 - percentage) * segmentLight.color0 + (float)percentage * segmentLight.color1;
@@ -49,8 +72,8 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
     glm::vec3 edge01 = glm::normalize(parallelogramLight.edge01),
               edge02 = glm::normalize(parallelogramLight.edge02); //Normalized edge01/02
 
-    float maxT1 = (parallelogramLight.edge01 / edge01).x,
-          maxT2 = (parallelogramLight.edge02 / edge02).x; //t values such maxT1 * edge01 = parallelogramLight.edge01
+    float maxT1 = getMaxTVal(parallelogramLight.edge01, edge01),
+          maxT2 = getMaxTVal(parallelogramLight.edge02, edge02); // t values such maxT1 * edge01 = parallelogramLight.edge01
 
     float t1 = getRandomNumInRange(0, maxT1), t2 = getRandomNumInRange(0, maxT2); //Random t_val
     glm::vec3 pointA = parallelogramLight.v0 + t1 * edge01,
