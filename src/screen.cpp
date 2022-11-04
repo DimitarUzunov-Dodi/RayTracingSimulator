@@ -93,7 +93,7 @@ void Screen::motionBlur(int sampleCount, float strength)
             for (j = 0; j < sampleCount; j++) {
                 int i2 = (m_resolution.y - 1 - (int)texCoords.y) * m_resolution.x + (int)texCoords.x;
                 texCoords += m_velocityBuffer.at(i) * strength;
-                if (i2 < m_textureData.size()) {
+                if ((int)texCoords.x < m_resolution.x && (int)texCoords.x >= 0 && (int)texCoords.y < m_resolution.y && (int)texCoords.y >= 0) {
                     m_textureData.at(i) += m_textureData.at(i2);
                 } else
                     break;
@@ -118,7 +118,7 @@ void Screen::debugMotionBlur(int sampleCount, float strength, float density)
             for (j = 0; j < sampleCount; j++) {
                 int i2 = (m_resolution.y - 1 - (int)texCoords.y) * m_resolution.x + (int)texCoords.x;
                 texCoords += m_velocityBuffer.at(i) * strength;
-                if (i2 < m_textureData.size()) {
+                if ((int)texCoords.x < m_resolution.x && (int)texCoords.x >= 0 && (int)texCoords.y < m_resolution.y && (int)texCoords.y >= 0) {
                     m_textureData.at(i2) = glm::vec3(0, 1, 0);
                 } else
                     break;
