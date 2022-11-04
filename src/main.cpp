@@ -429,7 +429,8 @@ int main(int argc, char** argv)
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
+                //renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
+                renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSampleCount, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
                 const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
