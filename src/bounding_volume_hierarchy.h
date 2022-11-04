@@ -5,6 +5,7 @@
 #include <vector>
 
 #define MAX_LEVELS 20
+extern bool enableDebugNonChecked;
 
 // Forward declaration.
 struct Scene;
