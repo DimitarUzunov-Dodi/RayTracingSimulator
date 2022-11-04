@@ -28,6 +28,7 @@ DISABLE_WARNINGS_POP()
 #include <string>
 #include <thread>
 #include <variant>
+#include <bounding_volume_hierarchy.h>
 
 // This is the main application. The code in here does not need to be modified.
 enum class ViewMode {
@@ -214,6 +215,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Draw BVH Leaf", &debugBVHLeaf);
                 if (debugBVHLeaf)
                     ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves());
+                ImGui::Checkbox("Draw traversed box", &enableDebugNonChecked);
             }
 
             ImGui::Spacing();
