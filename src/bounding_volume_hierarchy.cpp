@@ -10,7 +10,7 @@
 #include <iostream>
 #include <stack>
 #include <functional>
-
+#include <chrono>
 bool enableDebugNonChecked = false;
 
 float max(float f1, float f2) {
@@ -70,6 +70,9 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
 {
 
+    using clock = std::chrono::high_resolution_clock;
+    const auto start = clock::now();
+
     std::vector<TriangleOrChild> triangles;
     int m = 0;
     int bytes = 0;
@@ -93,6 +96,11 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     m_numLeaves = 1;
     nodes.push_back(root);
     subdivide(MAX_LEVELS, 0);
+
+    const auto end = clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    std::cout << "BVH creation took " << duration << " ms." << std::endl;
 }
 
 void BoundingVolumeHierarchy::subdivide(int limit, int node)
