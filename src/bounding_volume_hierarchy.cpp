@@ -312,14 +312,18 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
             
             float hitT = originalT;
 
-            while (!traverse.empty() && hitT > traverse.top().first) {
-                //hitT > traverse.top().first
+            while (!traverse.empty() ) {
+                
                 ray.t = originalT;
                 Node curr = traverse.top().second;
+                float dist = traverse.top().first;
                 drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(1.00f, 0.5f, 0.0f), 0.3f);
                 traverse.pop();
+                if (hitT < dist) {
+                    continue;
+                }
 
-                if (curr.internal /*&& !curr.children.empty()*/) {
+                if (curr.internal) {
                     float hit1;
                     float hit2;
                     bool intr1 = false;
@@ -352,12 +356,12 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                         traverse.push(std::pair(hit2, child2));
                     }
                     
-                    //itearate thrgroug all nodes till it finds a triangle
+                    
                                                                 
                 } else {
                     if (!curr.triangles.empty()) { 
                     
-                        for (Triangle t : curr.triangles) {
+                        for (Triangle &t : curr.triangles) {
                         v1 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x);
                         v2 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y);
                         v3 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z);
@@ -385,7 +389,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
             ray.t = originalT;
 
             if (hit) {
-                // intersectRayWithTriangle(tX.position, tY.position, tZ.position, ray, hitInfo)
+              
                 auto t = correctNode.triangles.at(0);
                 v1 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x);
                 v2 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y);
