@@ -76,3 +76,10 @@ struct Features {
 
     ExtraFeatures extra = {};
 };
+
+struct MotionBlurSettings {
+    int motionBlurSampleCount = 5;
+    float motionBlurStrength = 1.f;
+    float motionBlurDebugDensity = 0.1f; // 1.f means all pixels will have their velocities drawn, which is way too much screen clutter
+    bool motionBlurDebugMode = false;
+};

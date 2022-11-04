@@ -16,7 +16,7 @@
 #define GLOSSY_RAYS 12
 #define MAX_RENDER_DEPTH 3 
 
-glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth)
+glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray& ray, const Features& features, int rayDepth)
 {
     HitInfo hitInfo, hitInfo2;
     if (rayDepth <= MAX_RENDER_DEPTH && bvh.intersect(ray, hitInfo, features)) {
@@ -75,7 +75,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 
 
 void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, 
-    const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
+                      const MotionBlurSettings& motionBlurSettings, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
     std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
@@ -95,8 +95,18 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(x) / float(windowResolution.x) * 2.0f - 1.0f,
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
-            const Ray cameraRay = camera.generateRay(normalizedPixelPos);
+
+            Ray cameraRay = camera.generateRay(normalizedPixelPos);
             glm::vec3 finalColor = getFinalColor(scene, bvh, cameraRay, features);
+
+            if (features.extra.enableMotionBlur && !screen.firstRender)
+            {
+                glm::ivec2 pixelPosition(x, y);
+                glm::vec3 worldPosition = cameraRay.origin + cameraRay.direction * cameraRay.t;
+                if (!screen.firstRender) {
+                    screen.setVelocityBuffer(glm::vec2(x, y), windowResolution, worldPosition, motionBlurSettings.motionBlurSampleCount, cameraRay.t != std::numeric_limits<float>::max());
+                }
+            } 
             float RaysCount = 1.00f;
 
             if (features.extra.enableMultipleRaysPerPixel) {
@@ -114,7 +124,8 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                         glm::clamp(normalizedPixelPos.x + rX[i], -1.0f, 1.0f),
                         glm::clamp(normalizedPixelPos.y + rY[i], -1.0f, 1.0f)
                     };
-                    finalColor += getFinalColor(scene, bvh, camera.generateRay(normalizedPixelPos2), features);
+                    Ray ray = camera.generateRay(normalizedPixelPos2);
+                    finalColor += getFinalColor(scene, bvh, ray, features);
                 }
                 RaysCount += (float)raysPerPixel;
             }
@@ -135,5 +146,20 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
             else
                 screen.setPixel(x, y, toBeProcessed[y][x] + boxFiltered[y][x]);
         }
+    }
+
+    if (features.extra.enableMotionBlur) {
+        if (!screen.firstRender) {
+            if (motionBlurSettings.motionBlurDebugMode) {
+                screen.debugMotionBlur(motionBlurSettings.motionBlurSampleCount, motionBlurSettings.motionBlurStrength, motionBlurSettings.motionBlurDebugDensity);
+            }
+            else {
+                screen.motionBlur(motionBlurSettings.motionBlurSampleCount, motionBlurSettings.motionBlurStrength);
+            }
+        } else {
+            screen.firstRender = false;
+            screen.initVelocityBuffer(windowResolution.x * windowResolution.y);
+        }
+        screen.setPreviousCameraMatrix(camera);
     }
 }

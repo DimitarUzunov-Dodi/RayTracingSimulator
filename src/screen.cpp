@@ -11,6 +11,7 @@ DISABLE_WARNINGS_POP()
 #include <algorithm>
 #include <framework/opengl_includes.h>
 #include <string>
+#include "glm/gtx/string_cast.hpp"
 #include <iostream>
 
 Screen::Screen(const glm::ivec2& resolution, bool presentable)
@@ -27,6 +28,7 @@ Screen::Screen(const glm::ivec2& resolution, bool presentable)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
+    firstRender = true;
 }
 
 void Screen::clear(const glm::vec3& color)
@@ -40,6 +42,89 @@ void Screen::setPixel(int x, int y, const glm::vec3& color)
     // OpenGL / stbi like the origin / (-1,-1) to be at the TOP left corner so transform the y coordinate.
     const int i = (m_resolution.y - 1 - y) * m_resolution.x + x;
     m_textureData[i] = glm::vec4(color, 1.0f);
+}
+
+void Screen::setPreviousCameraMatrix(const Trackball& camera)
+{
+    m_previousViewMatrix = camera.viewMatrix();
+    m_previousProjectionMatrix = camera.projectionMatrix();
+}
+
+glm::vec2 getScreenPositionFromWorldPosition(glm::mat4 viewMatrix, glm::mat4 projectionMatrix, const glm::vec2& resolution, const glm::vec3& position)
+{
+    glm::vec4 normalized = projectionMatrix * (viewMatrix * glm::vec4(position, 1));
+    normalized = normalized / normalized.w;
+    glm::vec2 pixelPosition {
+        (normalized.x + 1) / 2 * float(resolution.x),
+        (normalized.y + 1) / 2 * float(resolution.y)
+    };
+    return pixelPosition;
+}
+
+void Screen::setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, int sampleCount, bool hit)
+{
+
+    const int i = (m_resolution.y - 1 - pixelPosition.y) * m_resolution.x + pixelPosition.x;
+    if (!hit) {
+        m_velocityBuffer.at(i) = glm::vec2(0, 0);
+        return;
+    }
+    glm::vec2 oldPixelPosition = getScreenPositionFromWorldPosition(m_previousViewMatrix, m_previousProjectionMatrix, resolution, worldPosition);
+    m_velocityBuffer.at(i) = (oldPixelPosition - glm::vec2(pixelPosition)) / (float)sampleCount;
+}
+
+void Screen::initVelocityBuffer(int size) 
+{
+    for (int i = 0; i < size; i++)
+        m_velocityBuffer.push_back(glm::vec2(0, 0));
+}
+
+void Screen::motionBlur(int sampleCount, float strength)
+{
+    for (int y = 0; y < m_resolution.y; y++) {
+        for (int x = 0; x != m_resolution.x; x++) {
+            int i = (m_resolution.y - 1 - y) * m_resolution.x + x;
+            if (glm::distance(m_velocityBuffer.at(i) * strength, glm::vec2(0, 0)) < 4.f)
+                continue;
+            glm::vec2 texCoords = glm::vec2(x, y);    
+            int j;
+            int cnt = 0;
+            glm::vec3 before = m_textureData.at(i);
+            for (j = 0; j < sampleCount; j++) {
+                int i2 = (m_resolution.y - 1 - (int)texCoords.y) * m_resolution.x + (int)texCoords.x;
+                texCoords += m_velocityBuffer.at(i) * strength;
+                if ((int)texCoords.x < m_resolution.x && (int)texCoords.x >= 0 && (int)texCoords.y < m_resolution.y && (int)texCoords.y >= 0) {
+                    m_textureData.at(i) += m_textureData.at(i2);
+                } else
+                    break;
+            }
+            m_textureData.at(i) = m_textureData.at(i) / (1.f + sampleCount);
+        }
+    }
+}
+
+void Screen::debugMotionBlur(int sampleCount, float strength, float density)
+{
+    int skip = 1 / density;
+    for (int y = 0; y < m_resolution.y; y = y + skip) {
+        for (int x = 0; x < m_resolution.x; x = x + skip) {
+            int i = (m_resolution.y - 1 - y) * m_resolution.x + x;
+            if (glm::distance(m_velocityBuffer.at(i) * strength, glm::vec2(0, 0)) < 4.f)
+                continue;
+            glm::vec2 texCoords = glm::vec2(x, y);
+            int j;
+            int cnt = 0;
+            glm::vec3 before = m_textureData.at(i);
+            for (j = 0; j < sampleCount; j++) {
+                int i2 = (m_resolution.y - 1 - (int)texCoords.y) * m_resolution.x + (int)texCoords.x;
+                texCoords += m_velocityBuffer.at(i) * strength;
+                if ((int)texCoords.x < m_resolution.x && (int)texCoords.x >= 0 && (int)texCoords.y < m_resolution.y && (int)texCoords.y >= 0) {
+                    m_textureData.at(i2) = glm::vec3(0, 1, 0);
+                } else
+                    break;
+            }
+        }
+    }
 }
 
 void Screen::writeBitmapToFile(const std::filesystem::path& filePath)
