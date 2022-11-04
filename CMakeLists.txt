@@ -28,8 +28,7 @@ add_library(FinalProjectLib
 	"src/shading.cpp"
 	"src/interpolate.cpp"
 	"src/render.cpp"
-)
-
+ "src/glossy.cpp" "src/filter.cpp")
 if (REFERENCE_MODE)
 	target_sources(FinalProjectLib PRIVATE
 		"src/extra/motion_blur.cpp"
@@ -63,7 +62,7 @@ endif()
 target_compile_definitions(FinalProjectLib PUBLIC
 	"-DDATA_DIR=\"${CMAKE_CURRENT_LIST_DIR}/data/\"")
 
-add_executable(FinalProject	"src/main.cpp")
+add_executable(FinalProject	"src/main.cpp" "src/glossy.cpp" "src/glossy.h")
 target_link_libraries(FinalProject PUBLIC FinalProjectLib)
 target_compile_features(FinalProject PUBLIC cxx_std_20)
 enable_sanitizers(FinalProject)

@@ -36,6 +36,10 @@ enum class ViewMode {
 };
 
 int debugBVHLeafId = 0;
+int raysPerPixel = 1;
+int motionBlurSampleCount = 5;
+float thresholdForBloomEffect = 0.0;
+int boxSizeValue = 3;
 
 static void setOpenGLMatrices(const Trackball& camera);
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
@@ -133,6 +137,7 @@ int main(int argc, char** argv)
             ImGui::Separator();
             if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Checkbox("Shading", &config.features.enableShading);
+                ImGui::Checkbox("Sample area lights", &config.features.enableAreaLightSampling);
                 ImGui::Checkbox("Recursive(reflections)", &config.features.enableRecursive);
                 ImGui::Checkbox("Hard shadows", &config.features.enableHardShadow);
                 ImGui::Checkbox("Soft shadows", &config.features.enableSoftShadow);
@@ -152,6 +157,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Transparency", &config.features.extra.enableTransparency);
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);
                 ImGui::Checkbox("Motion blur", &config.features.extra.enableMotionBlur);
+                ImGui::Checkbox("Multiple Rays per pixel", &config.features.extra.enableMultipleRaysPerPixel);
             }
             ImGui::Separator();
 
@@ -181,7 +187,7 @@ int main(int argc, char** argv)
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, config.features);
+                    renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSampleCount, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -192,6 +198,10 @@ int main(int argc, char** argv)
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Text("Debugging");
+            ImGui::SliderInt("Motion blur sample count", &motionBlurSampleCount, 1, 30);
+            ImGui::SliderInt("Number of rays per pixel", &raysPerPixel, 1, 30);
+            ImGui::DragFloat("Threshold for bloom effect", &thresholdForBloomEffect, 0.01f, 0.0f, 1.0f);
+            ImGui::SliderInt("Box size for bloom effect", &boxSizeValue, 1, 30);
             if (viewMode == ViewMode::Rasterization) {
                 ImGui::Checkbox("Draw BVH Level", &debugBVHLevel);
                 if (debugBVHLevel)
@@ -241,6 +251,12 @@ int main(int argc, char** argv)
                                 ImGui::DragFloat3("Endpoint 1", glm::value_ptr(light.endpoint1), 0.01f, -3.0f, 3.0f);
                                 ImGui::ColorEdit3("Color 0", glm::value_ptr(light.color0));
                                 ImGui::ColorEdit3("Color 1", glm::value_ptr(light.color1));
+                                if (ImGui::Button("Get sample from this light")) {
+                                    glm::vec3 sampledPosition, sampledColor;
+                                    sampleSegmentLight(light, sampledPosition, sampledColor);
+                                    std::cout << "position: (" << sampledPosition.x << " " << sampledPosition.y << " " << sampledPosition.z << ")" << std::endl
+                                              << "color: (" << sampledColor.x << " " << sampledColor.y << " " << sampledColor.z << ")" << std::endl;
+                                }
                             },
                             [&](ParallelogramLight& light) {
                                 glm::vec3 vertex1 = light.v0 + light.edge01;
@@ -267,6 +283,12 @@ int main(int argc, char** argv)
                                 ImGui::ColorEdit3("Color 1", glm::value_ptr(light.color1));
                                 ImGui::ColorEdit3("Color 2", glm::value_ptr(light.color2));
                                 ImGui::ColorEdit3("Color 3", glm::value_ptr(light.color3));
+                                if (ImGui::Button("Get sample")) {
+                                    glm::vec3 sampledPosition2, sampledColor2;
+                                    sampleParallelogramLight(light, sampledPosition2, sampledColor2);
+                                    std::cout << "position: (" << sampledPosition2.x << " " << sampledPosition2.y << " " << sampledPosition2.z << ")" << std::endl
+                                              << "color: (" << sampledColor2.x << " " << sampledColor2.y << " " << sampledColor2.z << ")" << std::endl;
+                                }
                             },
                             [](auto) { /* any other type of light */ }),
                         scene.lights[size_t(selectedLightIdx)]);
@@ -353,8 +375,9 @@ int main(int argc, char** argv)
             } break;
             case ViewMode::RayTracing: {
                 screen.clear(glm::vec3(0.0f));
-                renderRayTracing(scene, camera, bvh, screen, config.features);
-                screen.setPixel(0, 0, glm::vec3(1.0f));
+                //renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
+                renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSampleCount, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
+                //screen.setPixel(0, 0, glm::vec3(1.0f));
                 screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
             } break;
             default:
@@ -406,7 +429,7 @@ int main(int argc, char** argv)
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
                 const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());

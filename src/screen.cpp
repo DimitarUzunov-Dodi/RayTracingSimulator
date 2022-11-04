@@ -61,7 +61,7 @@ glm::vec2 getScreenPositionFromWorldPosition(glm::mat4 viewMatrix, glm::mat4 pro
     return pixelPosition;
 }
 
-void Screen::setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, bool hit)
+void Screen::setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, int sampleCount, bool hit)
 {
 
     const int i = (m_resolution.y - 1 - pixelPosition.y) * m_resolution.x + pixelPosition.x;
@@ -70,7 +70,7 @@ void Screen::setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2
         return;
     }
     glm::vec2 oldPixelPosition = getScreenPositionFromWorldPosition(m_previousViewMatrix, m_previousProjectionMatrix, resolution, worldPosition);
-    m_velocityBuffer.at(i) = (oldPixelPosition - glm::vec2(pixelPosition)) / 6.f; 
+    m_velocityBuffer.at(i) = (oldPixelPosition - glm::vec2(pixelPosition)) / (float)sampleCount;
 }
 
 void Screen::initVelocityBuffer(int size) 

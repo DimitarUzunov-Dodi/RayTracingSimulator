@@ -15,7 +15,7 @@ public:
     void clear(const glm::vec3& color);
     void setPixel(int x, int y, const glm::vec3& color);
     void setPreviousCameraMatrix(const Trackball& camera);
-    void setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, bool hit);
+    void setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, int sampleCount, bool hit);
     void initVelocityBuffer(int size);
     glm::vec3 getPixelVelocity(int x, int y);
     void motionBlur(int sampleCount);

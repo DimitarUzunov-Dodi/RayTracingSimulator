@@ -89,7 +89,6 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     subdivide(MAX_LEVELS, 0);
 }
 
-
 void BoundingVolumeHierarchy::subdivide(int limit, int node)
 {
     int level = nodes.at(node).level;
@@ -103,13 +102,13 @@ void BoundingVolumeHierarchy::subdivide(int limit, int node)
     int size = nodes.at(node).trianglesOrChildren.size();
     if (size > 1) {
 
-        sortByAxis(nodes.at(node).trianglesOrChildren, level % 3, m_pScene);
+        quickSortStepByAxis(nodes.at(node).trianglesOrChildren, level % 3, m_pScene);
         divided = true;
         m_numLeaves ++;
 
         std::vector<TriangleOrChild> left;
         std::vector<TriangleOrChild> right;
-        std::vector<TriangleOrChild>::iterator middleItr(nodes.at(node).trianglesOrChildren.begin() + nodes.at(node).trianglesOrChildren.size() / 2);
+        std::vector<TriangleOrChild>::iterator middleItr = nodes.at(node).trianglesOrChildren.begin() + nodes.at(node).trianglesOrChildren.size() / 2;
 
         for (auto it = nodes.at(node).trianglesOrChildren.begin(); it != nodes.at(node).trianglesOrChildren.end(); ++it) {
             if (std::distance(it, middleItr) > 0) {
@@ -216,7 +215,7 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
 
 Scene* tempScene;
 int tempAxis;
-bool sortTriangles(TriangleOrChild& t1, TriangleOrChild&t2) {
+bool compareTriangles(TriangleOrChild& t1, TriangleOrChild&t2) {
 
     auto mesh1 = &tempScene->meshes.at(t1.meshOrChild);
     auto mesh2 = &tempScene->meshes.at(t2.meshOrChild);
@@ -243,10 +242,13 @@ bool sortTriangles(TriangleOrChild& t1, TriangleOrChild&t2) {
 }
 
 
-void BoundingVolumeHierarchy::sortByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene) {
+void BoundingVolumeHierarchy::quickSortStepByAxis(std::vector<TriangleOrChild>& triangles, int axis, Scene* scene) {
     tempScene = scene;
     tempAxis = axis;
-    sort(triangles.begin(), triangles.end(), sortTriangles);
+    std::vector<TriangleOrChild> left;
+    std::vector<TriangleOrChild> right;
+    std::vector<TriangleOrChild>::iterator pivot(triangles.begin() + triangles.size() / 2);
+    std::nth_element(triangles.begin(), triangles.begin() + triangles.size() / 2, triangles.end(), compareTriangles);
 }
 
 // Return true if something is hit, returns false otherwise. Only find hits if they are closer than t stored
@@ -289,7 +291,9 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                       
                 }
             }
-            
+            if (features.enableNormalInterp && hit == true) {
+                hitInfo.normal = normal.direction;
+            }
         }
         
         if (features.enableNormalInterp && hit == true) {
@@ -299,9 +303,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
             drawRay(normalC, glm::vec3(0.0f, 0.0f, 1.0f));
             drawRay(normal, glm::vec3(0.0f, 0.5f, 1.0f));
 
-        } else if (hit == true) {
-            drawRay(norm, glm::vec3(0.0f, 0.5f, 1.0f));
-        }
+        } 
         // Intersect with spheres.
         for (const auto& sphere : m_pScene->spheres)
             hit |= intersectRayWithShape(sphere, ray, hitInfo);
