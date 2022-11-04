@@ -11,6 +11,8 @@
 #include <stack>
 #include <functional>
 
+bool enableDebugNonChecked = false;
+
 float max(float f1, float f2) {
     return f1 > f2 ? f1 : f2;
 }
@@ -350,6 +352,9 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                 }
                 traverse.pop();
                 if (hitT < dist) {
+                    if (enableDebugNonChecked) {
+                        drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(1.00f, 0.0f, 0.50f), 0.3f);
+                    }
                     continue;
                 }
 
