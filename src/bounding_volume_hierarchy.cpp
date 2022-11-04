@@ -295,7 +295,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         std::queue<Node> tree;
         
         Ray ourRay = ray;
-        std::stack < std::pair<float, Node> > traverse ;
+        std::stack < std::pair<float, int> > traverse ;
 
         Vertex v1;
         Vertex v2;
@@ -308,16 +308,18 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
 
         if (intersectRayWithShape(nodes.at(0).bounds, ray)) {
 
-            traverse.push(std::pair(ray.t,nodes.at(0)));
+            traverse.push(std::pair(ray.t,0));
             
             float hitT = originalT;
 
             while (!traverse.empty() ) {
                 
                 ray.t = originalT;
-                Node curr = traverse.top().second;
+                const Node& curr = nodes.at(traverse.top().second);
                 float dist = traverse.top().first;
-                drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(1.00f, 0.5f, 0.0f), 0.3f);
+                if (enableDebugDraw) {
+                     drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(0.00f, 1.f, 0.50f), 0.3f);
+                }
                 traverse.pop();
                 if (hitT < dist) {
                     continue;
@@ -328,8 +330,8 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                     float hit2;
                     bool intr1 = false;
                     bool intr2 = true;
-                    Node child1 = nodes.at(curr.children[0]);
-                    Node child2 = nodes.at(curr.children[1]);
+                    const Node& child1 = nodes.at(curr.children[0]);
+                    const Node& child2 = nodes.at(curr.children[1]);
                     
                     if (intersectRayWithShape(child1.bounds, ray)) { 
                         hit1 = ray.t;
@@ -344,24 +346,29 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
 
                     if (intr1 && intr2) {
                         if (hit1 < hit2) {
-                            traverse.push(std::pair(hit2, child2));
-                            traverse.push(std::pair(hit1, child1));
+                            traverse.push(std::pair(hit2, curr.children[1]));
+                            traverse.push(std::pair(hit1, curr.children[0]));
                         } else {
-                            traverse.push(std::pair(hit1, child1));
-                            traverse.push(std::pair(hit2, child2));
+                            traverse.push(std::pair(hit1, curr.children[0]));
+                            traverse.push(std::pair(hit2, curr.children[1]));
                         }
                     } else if (intr1) {
-                        traverse.push(std::pair(hit1, child1));
+                        traverse.push(std::pair(hit1, curr.children[0]));
                     } else if (intr2) {
-                        traverse.push(std::pair(hit2, child2));
+                        traverse.push(std::pair(hit2, curr.children[1]));
                     }
                     
                     
                                                                 
                 } else {
                     if (!curr.triangles.empty()) { 
+
                     
-                        for (Triangle &t : curr.triangles) {
+                        for (const Triangle &t : curr.triangles) {
+
+                        const Mesh& mesh = m_pScene->meshes[t.mesh];
+                        const glm::vec3& tr = mesh.triangles.at(t.triangle);
+
                         v1 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x);
                         v2 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y);
                         v3 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z);
@@ -387,14 +394,16 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
 
         }
             ray.t = originalT;
-
+        
             if (hit) {
               
                 auto t = correctNode.triangles.at(0);
                 v1 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).x);
                 v2 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).y);
                 v3 = m_pScene->meshes.at(t.mesh).vertices.at(m_pScene->meshes.at(t.mesh).triangles.at(t.triangle).z);
-                drawTriangle(v1, v2, v3);
+                if (enableDebugDraw) {
+                    drawTriangle(v1, v2, v3);
+                }
                 ray.t = originalT;
 
                 intersectRayWithTriangle(v1.position, v2.position, v3.position, ray, hitInfo);
