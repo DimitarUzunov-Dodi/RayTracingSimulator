@@ -79,23 +79,26 @@ void Screen::initVelocityBuffer(int size)
         m_velocityBuffer.push_back(glm::vec2(0, 0));
 }
 
-void Screen::motionBlur(int sampleCount)
+void Screen::motionBlur(int sampleCount, float strength)
 {
     for (int y = 0; y < m_resolution.y; y++) {
         for (int x = 0; x != m_resolution.x; x++) {
             int i = (m_resolution.y - 1 - y) * m_resolution.x + x;
-            glm::vec2 texCoords = glm::vec2(x, y) + m_velocityBuffer.at(i);    
+            if (glm::distance(m_velocityBuffer.at(i) * strength, glm::vec2(0, 0)) < 4.f)
+                continue;
+            glm::vec2 texCoords = glm::vec2(x, y);    
             int j;
+            int cnt = 0;
             glm::vec3 before = m_textureData.at(i);
-            for (j = 1; j < sampleCount; j++) {
+            for (j = 0; j < sampleCount; j++) {
                 int i2 = (m_resolution.y - 1 - (int)texCoords.y) * m_resolution.x + (int)texCoords.x;
-                if (i2 < m_textureData.size())
+                texCoords += m_velocityBuffer.at(i) * strength;
+                if (i2 < m_textureData.size()) {
                     m_textureData.at(i) += m_textureData.at(i2);
-                else
-                    break; // potential bug with dividing wrong number of samples
-                texCoords += m_velocityBuffer.at(i);
+                } else
+                    break;
             }
-            m_textureData.at(i) /= j;
+            m_textureData.at(i) = m_textureData.at(i) / (1.f + sampleCount);
         }
     }
 }

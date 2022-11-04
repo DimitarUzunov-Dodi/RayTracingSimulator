@@ -18,7 +18,7 @@ public:
     void setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2& resolution, const glm::vec3& worldPosition, int sampleCount, bool hit);
     void initVelocityBuffer(int size);
     glm::vec3 getPixelVelocity(int x, int y);
-    void motionBlur(int sampleCount);
+    void motionBlur(int sampleCount, float strength);
     void writeBitmapToFile(const std::filesystem::path& filePath);
     void draw();
 
