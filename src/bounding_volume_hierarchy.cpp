@@ -357,7 +357,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                     float hit1;
                     float hit2;
                     bool intr1 = false;
-                    bool intr2 = true;
+                    bool intr2 = false;
                     const Node& child1 = nodes.at(curr.trianglesOrChildren[0].meshOrChild);
                     const Node& child2 = nodes.at(curr.trianglesOrChildren[1].meshOrChild);
                     
