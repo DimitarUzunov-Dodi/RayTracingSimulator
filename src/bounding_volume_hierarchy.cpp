@@ -6,6 +6,10 @@
 #include "interpolate.h"
 #include "bounding_volume_hierarchy.h"
 #include <glm/glm.hpp>
+#include <queue>
+#include <iostream>
+#include <stack>
+#include <functional>
 
 float max(float f1, float f2) {
     return f1 > f2 ? f1 : f2;
@@ -312,8 +316,139 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // TODO: implement here the bounding volume hierarchy traversal.
         // Please note that you should use `features.enableNormalInterp` and `features.enableTextureMapping`
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
-        return false;
+
+        // nodes
+        bool hit = false;
+        std::queue<Node> colloredNodes;
+        std::queue<Node> tree;
+        
+        Ray ourRay = ray;
+        std::stack < std::pair<float, int> > traverse ;
+
+        Vertex v1;
+        Vertex v2;
+        Vertex v3;
+        Node correctNode;
+
+        float originalT = ray.t;
+
+       
+
+        if (intersectRayWithShape(nodes.at(0).bounds, ray)) {
+
+            traverse.push(std::pair(ray.t,0));
+            
+            float hitT = originalT;
+
+            while (!traverse.empty() ) {
+                
+                ray.t = originalT;
+                const Node& curr = nodes.at(traverse.top().second);
+                float dist = traverse.top().first;
+                if (enableDebugDraw) {
+                     drawAABB(curr.bounds, DrawMode::Wireframe, glm::vec3(0.00f, 1.f, 0.50f), 0.3f);
+                }
+                traverse.pop();
+                if (hitT < dist) {
+                    continue;
+                }
+
+                if (curr.internal) {
+                    float hit1;
+                    float hit2;
+                    bool intr1 = false;
+                    bool intr2 = false;
+                    const Node& child1 = nodes.at(curr.trianglesOrChildren[0].meshOrChild);
+                    const Node& child2 = nodes.at(curr.trianglesOrChildren[1].meshOrChild);
+                    
+                    if (intersectRayWithShape(child1.bounds, ray)) { 
+                        hit1 = ray.t;
+                        ray.t = originalT;
+                        intr1 = true;   
+                    }
+                    if (intersectRayWithShape(child2.bounds, ray)) {
+                        hit2 = ray.t;
+                        ray.t = originalT;
+                        intr2 = true;
+                    }
+
+                    if (intr1 && intr2) {
+                        if (hit1 < hit2) {
+                            traverse.push(std::pair(hit2, curr.trianglesOrChildren[1].meshOrChild));
+                            traverse.push(std::pair(hit1, curr.trianglesOrChildren[0].meshOrChild));
+                        } else {
+                            traverse.push(std::pair(hit1, curr.trianglesOrChildren[0].meshOrChild));
+                            traverse.push(std::pair(hit2, curr.trianglesOrChildren[1].meshOrChild));
+                        }
+                    } else if (intr1) {
+                        traverse.push(std::pair(hit1, curr.trianglesOrChildren[0].meshOrChild));
+                    } else if (intr2) {
+                        traverse.push(std::pair(hit2, curr.trianglesOrChildren[1].meshOrChild));
+                    }
+                   
+                    
+                                                                
+                } else {
+                    if (!curr.trianglesOrChildren.empty()) { 
+
+                    
+                        for (const TriangleOrChild &t : curr.trianglesOrChildren) {
+
+                        const Mesh& mesh = m_pScene->meshes[t.meshOrChild];
+                        const glm::vec3& tr = mesh.triangles.at(t.triangle);
+
+                        v1 = m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).x);
+                        v2 = m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).y);
+                        v3 = m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).z);
+                        ray.t = originalT;
+                        if (intersectRayWithTriangle(v1.position, v2.position, v3.position, ray, hitInfo)) {
+                            if (hitT > ray.t) {
+                                hitT = ray.t;
+                                correctNode = curr;
+                                hitInfo.material = m_pScene->meshes.at(t.meshOrChild).material;
+                                hitInfo.normal = glm::normalize(glm::cross(v2.position - v1.position, v3.position - v1.position));
+                                hitInfo.barycentricCoord = computeBarycentricCoord(v1.position, v2.position, v3.position, ray.origin + ray.direction * ray.t);
+                                hitInfo.texCoord = interpolateTexCoord(v1.texCoord, v2.texCoord, v3.texCoord, hitInfo.barycentricCoord);
+                                hit = true;
+
+                                if (features.enableNormalInterp && hit == true) {
+                                    Ray normal = Ray(ray.origin + ray.direction * ray.t, interpolateNormal(v1.normal, v2.normal, v3.normal, hitInfo.barycentricCoord), 0.5f);
+                                    hitInfo.normal = normal.direction;
+                                }
+                                
+
+
+                           } // TODO add the normalInterpolation case
+                        }
+
+                    }
+                    
+                }    
+            }
+
+
+        }
+            ray.t = originalT;
+        
+            if (hit) {
+              
+                auto t = correctNode.trianglesOrChildren.at(0);
+                v1 = m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).x);
+                v2 = m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).y);
+                v3 = m_pScene->meshes.at(t.meshOrChild).vertices.at(m_pScene->meshes.at(t.meshOrChild).triangles.at(t.triangle).z);
+                if (enableDebugDraw) {
+                    drawTriangle(v1, v2, v3);
+                }
+                ray.t = originalT;
+
+                intersectRayWithTriangle(v1.position, v2.position, v3.position, ray, hitInfo);
+            }
+
+           
+        }
+        return hit;
     }
+    
 }
 
 TriangleOrChild::TriangleOrChild(int mesh, int triangle)
@@ -325,3 +460,4 @@ TriangleOrChild::TriangleOrChild(int mesh, int triangle)
 Node::Node()
 {
 }
+
