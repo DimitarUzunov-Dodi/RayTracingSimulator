@@ -75,7 +75,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray& ray, c
 
 
 void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, 
-                      int& motionBlurSampleCount, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
+                      const int& motionBlurSampleCount, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
     std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
@@ -97,6 +97,8 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
             };
 
             Ray cameraRay = camera.generateRay(normalizedPixelPos);
+            glm::vec3 finalColor = getFinalColor(scene, bvh, cameraRay, features);
+
             if (features.extra.enableMotionBlur && !screen.firstRender)
             {
                 glm::ivec2 pixelPosition(x, y);
@@ -105,7 +107,6 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                     screen.setVelocityBuffer(pixelPosition, windowResolution, worldPosition, motionBlurSampleCount, cameraRay.t != std::numeric_limits<float>::max());
                 }
             } 
-            glm::vec3 finalColor = getFinalColor(scene, bvh, cameraRay, features);
             float RaysCount = 1.00f;
 
             if (features.extra.enableMultipleRaysPerPixel) {
