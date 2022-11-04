@@ -75,7 +75,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray& ray, c
 
 
 void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features, 
-                      const int& motionBlurSampleCount, const float& motionBlurStrength, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
+                      const MotionBlurSettings& motionBlurSettings, const float& thresholdForBloomEffect, const int& boxSizeBloomEffect, const int& raysPerPixel)
 {
     glm::ivec2 windowResolution = screen.resolution();
     std::vector<std::vector<glm::vec3>> toBeProcessed(windowResolution.y), boxFiltered(windowResolution.y);
@@ -104,7 +104,7 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 glm::ivec2 pixelPosition(x, y);
                 glm::vec3 worldPosition = cameraRay.origin + cameraRay.direction * cameraRay.t;
                 if (!screen.firstRender) {
-                    screen.setVelocityBuffer(glm::vec2(x, y), windowResolution, worldPosition, motionBlurSampleCount, cameraRay.t != std::numeric_limits<float>::max());
+                    screen.setVelocityBuffer(glm::vec2(x, y), windowResolution, worldPosition, motionBlurSettings.motionBlurSampleCount, cameraRay.t != std::numeric_limits<float>::max());
                 }
             } 
             float RaysCount = 1.00f;
@@ -150,7 +150,12 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
 
     if (features.extra.enableMotionBlur) {
         if (!screen.firstRender) {
-            screen.motionBlur(motionBlurSampleCount, motionBlurStrength);
+            if (motionBlurSettings.motionBlurDebugMode) {
+                screen.debugMotionBlur(motionBlurSettings.motionBlurSampleCount, motionBlurSettings.motionBlurStrength, motionBlurSettings.motionBlurDebugDensity);
+            }
+            else {
+                screen.motionBlur(motionBlurSettings.motionBlurSampleCount, motionBlurSettings.motionBlurStrength);
+            }
         } else {
             screen.firstRender = false;
             screen.initVelocityBuffer(windowResolution.x * windowResolution.y);

@@ -19,6 +19,7 @@ public:
     void initVelocityBuffer(int size);
     glm::vec3 getPixelVelocity(int x, int y);
     void motionBlur(int sampleCount, float strength);
+    void debugMotionBlur(int sampleCount, float strength, float density);
     void writeBitmapToFile(const std::filesystem::path& filePath);
     void draw();
 

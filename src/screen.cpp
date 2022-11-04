@@ -70,7 +70,7 @@ void Screen::setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2
         return;
     }
     glm::vec2 oldPixelPosition = getScreenPositionFromWorldPosition(m_previousViewMatrix, m_previousProjectionMatrix, resolution, worldPosition);
-    m_velocityBuffer.at(i) = (glm::vec2(pixelPosition) - oldPixelPosition) / (float)sampleCount;
+    m_velocityBuffer.at(i) = (oldPixelPosition - glm::vec2(pixelPosition)) / (float)sampleCount;
 }
 
 void Screen::initVelocityBuffer(int size) 
@@ -99,6 +99,30 @@ void Screen::motionBlur(int sampleCount, float strength)
                     break;
             }
             m_textureData.at(i) = m_textureData.at(i) / (1.f + sampleCount);
+        }
+    }
+}
+
+void Screen::debugMotionBlur(int sampleCount, float strength, float density)
+{
+    int skip = 1 / density;
+    for (int y = 0; y < m_resolution.y; y = y + skip) {
+        for (int x = 0; x < m_resolution.x; x = x + skip) {
+            int i = (m_resolution.y - 1 - y) * m_resolution.x + x;
+            if (glm::distance(m_velocityBuffer.at(i) * strength, glm::vec2(0, 0)) < 4.f)
+                continue;
+            glm::vec2 texCoords = glm::vec2(x, y);
+            int j;
+            int cnt = 0;
+            glm::vec3 before = m_textureData.at(i);
+            for (j = 0; j < sampleCount; j++) {
+                int i2 = (m_resolution.y - 1 - (int)texCoords.y) * m_resolution.x + (int)texCoords.x;
+                texCoords += m_velocityBuffer.at(i) * strength;
+                if (i2 < m_textureData.size()) {
+                    m_textureData.at(i2) = glm::vec3(0, 1, 0);
+                } else
+                    break;
+            }
         }
     }
 }

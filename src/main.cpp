@@ -37,8 +37,7 @@ enum class ViewMode {
 
 int debugBVHLeafId = 0;
 int raysPerPixel = 1;
-int motionBlurSampleCount = 5;
-float motionBlurStrength = 1.f;
+MotionBlurSettings motionBlurSettings;
 float thresholdForBloomEffect = 0.0;
 int boxSizeValue = 3;
 
@@ -188,7 +187,7 @@ int main(int argc, char** argv)
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSampleCount, motionBlurStrength, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
+                    renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSettings, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -199,8 +198,12 @@ int main(int argc, char** argv)
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Text("Debugging");
-            ImGui::SliderInt("Motion blur sample count", &motionBlurSampleCount, 1, 30);
-            ImGui::DragFloat("Motion blur strength", &motionBlurStrength, 0.01f, 0.0f, 2.0f);
+            if (ImGui::CollapsingHeader("Motion blur")) {
+                ImGui::SliderInt("Motion blur sample count", &motionBlurSettings.motionBlurSampleCount, 1, 10);
+                ImGui::DragFloat("Motion blur strength", &motionBlurSettings.motionBlurStrength, 0.01f, 0.0f, 2.0f);
+                ImGui::Checkbox("Debug enable", &motionBlurSettings.motionBlurDebugMode);
+                ImGui::DragFloat("Debug density", &motionBlurSettings.motionBlurDebugDensity);
+            }
             ImGui::SliderInt("Number of rays per pixel", &raysPerPixel, 1, 30);
             ImGui::DragFloat("Threshold for bloom effect", &thresholdForBloomEffect, 0.01f, 0.0f, 1.0f);
             ImGui::SliderInt("Box size for bloom effect", &boxSizeValue, 1, 30);
@@ -378,7 +381,7 @@ int main(int argc, char** argv)
             case ViewMode::RayTracing: {
                 screen.clear(glm::vec3(0.0f));
                 //renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
-                renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSampleCount, motionBlurStrength, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
+                renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSettings, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
                 //screen.setPixel(0, 0, glm::vec3(1.0f));
                 screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
             } break;
@@ -432,7 +435,7 @@ int main(int argc, char** argv)
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
                 //renderRayTracing(scene, camera, bvh, screen, config.features, -1.0);
-                renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSampleCount, motionBlurStrength, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
+                renderRayTracing(scene, camera, bvh, screen, config.features, motionBlurSettings, thresholdForBloomEffect, boxSizeValue, raysPerPixel);
                 const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
