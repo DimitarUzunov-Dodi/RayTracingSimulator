@@ -70,7 +70,7 @@ void Screen::setVelocityBuffer(const glm::ivec2& pixelPosition, const glm::ivec2
         return;
     }
     glm::vec2 oldPixelPosition = getScreenPositionFromWorldPosition(m_previousViewMatrix, m_previousProjectionMatrix, resolution, worldPosition);
-    m_velocityBuffer.at(i) = (oldPixelPosition - glm::vec2(pixelPosition)) / (float)sampleCount;
+    m_velocityBuffer.at(i) = (glm::vec2(pixelPosition) - oldPixelPosition) / (float)sampleCount;
 }
 
 void Screen::initVelocityBuffer(int size) 
